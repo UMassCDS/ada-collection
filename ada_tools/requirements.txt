@@ -27,3 +27,6 @@ snuggs>=1.4.7             # via ada_tools (setup.py), rasterio
 soupsieve>=2.0.1          # via ada_tools (setup.py), beautifulsoup4
 tqdm>=4.48.2              # via ada_tools (setup.py)
 dateparser>=0.7.6
+matplotlib==3.6.3
+scikit-image==0.19.3
+scipy==1.9.3
