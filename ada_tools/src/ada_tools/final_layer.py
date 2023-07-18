@@ -11,6 +11,8 @@ import numpy as np
 @click.option('--out', default='buildings_predictions.geojson', help='input')
 @click.option('--thresh', default="no", help='threshold to binarize output')
 def main(builds, damage, out, thresh):
+    if thresh != "no":
+        thresh = int(thresh)
     df = gpd.read_file(builds).to_crs(epsg="4326")
     df = df.loc[~df["geometry"].is_empty]
     if "OBJECTID" in df.columns:
