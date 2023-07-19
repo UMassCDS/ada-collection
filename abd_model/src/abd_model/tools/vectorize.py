@@ -47,6 +47,7 @@ def main(args):
     out.write('{"type":"FeatureCollection","features":[')
 
     first = True
+
     for tile, path in tqdm(masks, ascii=True, unit="mask"):
         mask = (np.array(Image.open(path).convert("P"), dtype=np.uint8) == index).astype(np.uint8)
         try:
@@ -54,10 +55,10 @@ def main(args):
         except:
             W, H = mask.shape
         transform = rasterio.transform.from_bounds((*mercantile.bounds(tile.x, tile.y, tile.z)), W, H)
-
+        tile_id_string = '"{}_{}_{}"'.format(tile.x, tile.y, tile.z)
         for shape, value in rasterio.features.shapes(mask, transform=transform, mask=mask):
             geom = '"geometry":{{"type": "Polygon", "coordinates":{}}}'.format(json.dumps(shape["coordinates"]))
-            out.write('{}{{"type":"Feature",{}}}'.format("" if first else ",", geom))
+            out.write('{}{{"type":"Feature", "properties": {{"TILE_ID": {}}}, {}}}'.format("" if first else ",", tile_id_string, geom))
             first = False
 
     out.write("]}")

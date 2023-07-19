@@ -114,15 +114,18 @@ def merge_touching_buildings(gdf):
     num_disj_start = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
     num_disj = num_disj_start
     while num_disj > 0:
-        df_sj = df_sj.dissolve(by='index_right').rename_axis(index={'index_right': 'index'})
+        df_sj = df_sj.dissolve(by='index_right').rename_axis(index={'index_right': 'index'}).rename(columns={'TILE_ID_right': 'TILE_ID'})
         df_sj = df_sj.drop_duplicates(subset=['geometry'])
-        df_sj = df_sj[['geometry']]
-        df_sj = gpd.sjoin(df_sj, df_sj, how='left', predicate='intersects')
+        df_sj = df_sj[['geometry', 'TILE_ID']]
+        df_sj = gpd.sjoin(df_sj, df_sj, how='left', op='intersects')
         df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})
         num_disj = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
         if num_disj > num_disj_start:
             df_sj = df_sj.dissolve(by='index_left')
-    df_sj.drop(['index_left', 'index_right'], axis=1, inplace=True)
+    if 'TILE_ID_left' not in df_sj.columns:
+        print(df_sj.head())
+    df_sj.drop(['index_left', 'index_right', 'TILE_ID_left'], axis=1, inplace=True)
+    df_sj = df_sj.rename(columns={'TILE_ID_right': 'TILE_ID'})
     return df_sj
 
 
@@ -156,13 +159,15 @@ def main(data, dest, crsmeters, waterbodies, area):
     gdf = gdf.to_crs(crsmeters)
     gdf['area'] = gdf['geometry'].area
     gdf = gdf[gdf.area > area]
-    gdf = gdf[['geometry']]
+    gdf = gdf[['geometry', 'TILE_ID']]
     print(f'filter completed ({len(gdf)} entries)')
 
     # simplify geometry
+    tile_ids = gdf['TILE_ID']
     gdf = gdf.simplify(tolerance=1., preserve_topology=True)
     gdf = gdf.to_crs(crs_original)
     gdf = gpd.GeoDataFrame(geometry=gdf)
+    gdf['TILE_ID'] = tile_ids
     gdf = gdf[~(gdf.geometry.is_empty | gdf.geometry.isna())]
 
     # filter by water bodies
