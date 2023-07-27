@@ -35,7 +35,8 @@ setuptools.setup(
             f"setup-wd = {PROJECT_NAME}.setup_wd:main",
             f"merge-output = {PROJECT_NAME}.merge_output:main",
             f"align-raster = {PROJECT_NAME}.align_raster:main",
-            f"check-alternative-buildings = {PROJECT_NAME}.check_alternative_buildings:main"
+            f"check-alternative-buildings = {PROJECT_NAME}.check_alternative_buildings:main",
+            f"setup-discount = {PROJECT_NAME}.setup_discount:main"
         ]
     }
 )
