@@ -2,12 +2,12 @@ requests==2.24.0
 albumentations==0.4.6
 click==8.1.4
 mercantile==1.1.5
-numpy==1.23.5
+numpy>=1.23.5
 # osmium==3.0.1
 Pillow==8.3.2
 psycopg2-binary==2.8.5
 # rasterio==1.1.5
-scikit-build==0.11.1
+scikit-build>=0.11.1
 Shapely>=1.7.0
 supermercado==0.1.1
 toml==0.10.1

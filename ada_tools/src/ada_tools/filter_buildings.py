@@ -122,8 +122,6 @@ def merge_touching_buildings(gdf):
         num_disj = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
         if num_disj > num_disj_start:
             df_sj = df_sj.dissolve(by='index_left')
-    if 'TILE_ID_left' not in df_sj.columns:
-        print(df_sj.head())
     df_sj.drop(['index_left', 'index_right', 'TILE_ID_left'], axis=1, inplace=True)
     df_sj = df_sj.rename(columns={'TILE_ID_right': 'TILE_ID'})
     return df_sj

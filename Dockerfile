@@ -33,9 +33,9 @@ ADD ada_tools .
 RUN pip install .
 
 # install abd in env abd
-RUN conda create -y -n abd python=3.7
+RUN conda create -y -n abd python=3.8
 SHELL ["conda", "run", "-n", "abd", "/bin/bash", "-c"]
-WORKDIR /abd
+WORKDIR /abd_model
 ADD abd_model .
 RUN pip install .
 
@@ -53,5 +53,6 @@ WORKDIR /
 # go back to env base
 SHELL ["conda", "run", "-n", "base", "/bin/bash", "-c"]
 
+COPY end_to_end_script.sh end_to_end_script.sh
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
