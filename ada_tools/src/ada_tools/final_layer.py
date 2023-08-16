@@ -36,15 +36,7 @@ def main(builds, damage, out, thresh):
         except:
             df.at[index, 'damage'] = np.nan
         df.at[index, 'ID'] = index
-    df['tile_bbox'] = df['TILE_ID'].map(lambda t : getcoordinates(t))
     df.to_file(out, driver='GeoJSON')
-
-
-# Get Tile bounds from Tile ID
-def getcoordinates(tile_id):
-    x, y, z = [int(m) for m in tile_id.split('_')]
-    coords = bounds(Tile(x=x, y=y, z=z))
-    return ','.join([str(c) for c in coords])
 
 if __name__ == "__main__":
     main()
