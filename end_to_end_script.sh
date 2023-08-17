@@ -2,7 +2,7 @@
 # source ~/miniconda3/etc/profile.d/conda.sh
 
 WORKSPACE=$1
-load-images --disaster typhoon-mangkhut --dest <workspace>/images
+load-images --disaster typhoon-mangkhut --dest $WORKSPACE/images
 conda activate abdenv
 abd cover --raster $WORKSPACE/images/pre-event/https:--opendata.digitalglobe.com-events-typhoon-mangkhut-pre-event-2018-04-09-103001007E413300-103001007E413300.tif --zoom 17 --out $WORKSPACE/abd/cover.csv
 abd tile --raster $WORKSPACE/images/pre-event/https:--opendata.digitalglobe.com-events-typhoon-mangkhut-pre-event-2018-04-09-103001007E413300-103001007E413300.tif --zoom 17 --cover $WORKSPACE/abd/cover.csv --out $WORKSPACE/abd/images --format tif --no_web_ui --config ada_tools/config.toml
