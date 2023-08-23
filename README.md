@@ -50,6 +50,8 @@ docker exec -it ada-collection bash
 ```
 
 ### Manual Setup
+Note that these steps are only tested on Linux, they are known not to work on MacOS. 
+
 1. Install Python 3.7 and [pip](https://pypi.org/project/pip/).
 2. Install [Anaconda](https://www.anaconda.com/products/individual).
 3. Create and activate a new Anaconda environment.

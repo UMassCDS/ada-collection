@@ -1,11 +1,18 @@
 #!/bin/bash
-# source ~/miniconda3/etc/profile.d/conda.sh
+
+# If you use miniconda to manage your environments, uncomment the following line so that `conda activate` commands work
+#source ~/miniconda3/etc/profile.d/conda.sh
 
 WORKSPACE=$1
-load-images --disaster typhoon-mangkhut --dest $WORKSPACE/images
+
+DISASTER=typhoon-mangkhut
+
 conda activate abdenv
-abd cover --raster $WORKSPACE/images/pre-event/https:--opendata.digitalglobe.com-events-typhoon-mangkhut-pre-event-2018-04-09-103001007E413300-103001007E413300.tif --zoom 17 --out $WORKSPACE/abd/cover.csv
-abd tile --raster $WORKSPACE/images/pre-event/https:--opendata.digitalglobe.com-events-typhoon-mangkhut-pre-event-2018-04-09-103001007E413300-103001007E413300.tif --zoom 17 --cover $WORKSPACE/abd/cover.csv --out $WORKSPACE/abd/images --format tif --no_web_ui --config ada_tools/config.toml
+
+load-images --disaster $DISASTER --dest $WORKSPACE/images
+
+abd cover --raster $WORKSPACE/images/pre-event/*.tif --zoom 17 --out $WORKSPACE/abd/cover.csv
+abd tile --raster $WORKSPACE/images/pre-event/*.tif --zoom 17 --cover $WORKSPACE/abd/cover.csv --out $WORKSPACE/abd/images --format tif --no_web_ui --config ada_tools/config.toml
 
 abd predict --dataset abd --cover $WORKSPACE/abd/cover.csv --checkpoint neat-fullxview-epoch75.pth --out $WORKSPACE/abd/predictions --metatiles --keep_borders --config ada_tools/config.toml
 abd vectorize --masks $WORKSPACE/abd/predictions --type Building --out $WORKSPACE/abd/buildings.geojson --config ada_tools/config.toml

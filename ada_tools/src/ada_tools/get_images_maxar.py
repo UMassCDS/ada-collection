@@ -35,6 +35,9 @@ def get_maxar_image_urls(disaster: str) -> List[str]:
     ]
 
 
+# TODO - this needs to be updated to new file paths/image format from MAXAR 
+# Compare the old format that the repo works, https://www.maxar.com/open-data/typhoon-mangkhut, 
+# to the new https://www.maxar.com/open-data/maui-hawaii-fires
 def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
     "Split images into the pre- and post-disaster images."        
     if splitdate is not None:
@@ -105,7 +108,10 @@ def main(disaster, dest, splitdate, maxpre, maxpost, maxthreads, progress_format
     os.makedirs(dest+'/post-event', exist_ok=True)
 
     urls = get_maxar_image_urls(disaster)
-    images_pre, images_post = split_pre_post(urls, splitdate)
+    print(urls)
+    images_pre = ["https://maxar-opendata.s3.us-west-2.amazonaws.com/events/Maui-Hawaii-fires-Aug-23/ard/04/122000331202/2023-08-12/105001003590C300-visual.tif"]
+    images_post = ["https://maxar-opendata.s3.us-west-2.amazonaws.com/events/Maui-Hawaii-fires-Aug-23/ard/04/122000331202/2023-08-09/10503F0006FE4B00-visual.tif"]
+    #images_pre, images_post = split_pre_post(urls, splitdate)
 
     # apply maxpre and maxpost
     images_pre = images_pre[:maxpre]
