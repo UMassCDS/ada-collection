@@ -113,4 +113,9 @@ CUDA_VISIBLE_DEVICES="0" python caladrius/caladrius/run.py --run-name run --data
 ```
 final-layer --builds <workspace>/abd/buildings-clean.geojson --damage <workspace>/caladrius/runs/run-input_size_32-learning_rate_0.001-batch_size_32/predictions/run-split_inference-epoch_001-model_inception-predictions.txt --out <workspace>/buildings-predictions.geojson --thresh 1
 ```
-8) Take your favorite [GIS application](https://en.wikipedia.org/wiki/Geographic_information_system) and visualize `<workspace>/buildings-predictions.geojson` in a nice map
+8) Run the DISCount algorithm 
+```
+setup-discount --input $WORKSPACE/buildings-predictions.geojson
+```
+- This step aggregates all GeoJSONs in the tile level and runs a sampling algorithm to produce a GeoJSON with automated detections. 
+9) Upload the outputted tiles folder to the labeler tool
