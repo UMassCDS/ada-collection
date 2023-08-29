@@ -12,6 +12,7 @@ import rasterio
 from rasterio.warp import transform_bounds
 import re
 
+EPS = 4e-2
 np.random.seed(0)
 # Get Tile bounds from Tile ID
 def get_tile_bounds(tile_id):
@@ -47,9 +48,13 @@ def main(input, outdir, out_csv, out_sample):
 
     tiles_df = gdf.groupby('TILE_ID').size().reset_index().rename(columns={0: 'detector_count'})
     tiles_df.loc[:, ['true_count', 'Annotator']] = ''
+    detector_counts = list(tiles_df['detector_count'])
+    if min(detector_counts) == 0:
+        detector_counts = [c + max(max(detector_counts)*EPS, 1) for c in detector_counts]
+
+    tiles_df['detector_count'] = detector_counts
     tiles_df.to_csv(out_csv, index=False)
 
-    detector_counts = list(tiles_df['detector_count'])
     tile_ids = list(tiles_df['TILE_ID'])
     prob_dist = np.array(detector_counts) / np.sum(detector_counts)
     samples = list(np.random.choice(tile_ids, 2 * len(tile_ids), p=prob_dist, replace=True))
