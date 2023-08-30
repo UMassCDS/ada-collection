@@ -77,7 +77,7 @@ def gpu_worker(rank, world_size, lock_file, args, config, dataset, palette, tran
                 ts = int(W)
 
                 # fmt:off
-                probs = np.zeros((N, C, W, H), dtype=np.float)
+                probs = np.zeros((N, C, W, H), dtype=float)
                 probs[:, :, 0:hs, 0:hs] = nn(images[:, :, 0:ts, 0:ts].to(rank)).data.cpu().numpy()[:, :, qs:-qs, qs:-qs]
                 probs[:, :, 0:hs,  hs:] = nn(images[:, :, 0:ts,  hs:].to(rank)).data.cpu().numpy()[:, :, qs:-qs, qs:-qs]
                 probs[:, :, hs:,  0:hs] = nn(images[:, :, hs:,  0:ts].to(rank)).data.cpu().numpy()[:, :, qs:-qs, qs:-qs]
