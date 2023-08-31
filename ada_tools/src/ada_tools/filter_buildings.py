@@ -117,7 +117,7 @@ def merge_touching_buildings(gdf):
         df_sj = df_sj.dissolve(by='index_right').rename_axis(index={'index_right': 'index'}).rename(columns={'TILE_ID_right': 'TILE_ID'})
         df_sj = df_sj.drop_duplicates(subset=['geometry'])
         df_sj = df_sj[['geometry', 'TILE_ID']]
-        df_sj = gpd.sjoin(df_sj, df_sj, how='left', op='intersects')
+        df_sj = gpd.sjoin(df_sj, df_sj, how='left', predicate='intersects')
         df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})
         num_disj = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
         if num_disj > num_disj_start:

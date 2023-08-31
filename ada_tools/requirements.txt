@@ -9,7 +9,7 @@ click>=7.1.2              # via ada_tools (setup.py), click-plugins, cligj, fion
 cligj>=0.5.0              # via ada_tools (setup.py), fiona, rasterio
 fiona>=1.8.13.post1       # via ada_tools (setup.py), geopandas
 # gdal>==3.1.2               # via ada_tools (setup.py)  # installed separately
-geopandas>=0.8.1          # via ada_tools (setup.py)
+geopandas>=0.10.0          # via ada_tools (setup.py)
 munch>=2.5.0              # via ada_tools (setup.py), fiona
 numpy>=1.23.5             # via ada_tools (setup.py), pandas, rasterio, snuggs
 Pillow==10.0.0
