@@ -45,8 +45,8 @@ def main(input, outdir, out_csv, out_sample):
     gdf = gdf[gdf["damage"] >= 1.0]
 
     os.makedirs(outdir, exist_ok=True)
-
-    tiles_df = gdf.groupby('TILE_ID').size().reset_index().rename(columns={0: 'detector_count'})
+    
+    tiles_df = gdf.groupby('TILE_ID')['damage'].count().reset_index().rename(columns={'damage': 'detector_count'})
     tiles_df.loc[:, ['true_count', 'Annotator']] = ''
     detector_counts = list(tiles_df['detector_count'])
     if min(detector_counts) == 0:
