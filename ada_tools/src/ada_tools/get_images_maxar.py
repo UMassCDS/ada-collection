@@ -108,8 +108,6 @@ def main(disaster, dest, splitdate, maxpre, maxpost, maxthreads, progress_format
     os.makedirs(dest+'/post-event', exist_ok=True)
 
     urls = get_maxar_image_urls(disaster)
-    #images_pre = ["https://maxar-opendata.s3.us-west-2.amazonaws.com/events/Maui-Hawaii-fires-Aug-23/ard/04/122000331202/2023-08-12/105001003590C300-visual.tif"]
-    #images_post = ["https://maxar-opendata.s3.us-west-2.amazonaws.com/events/Maui-Hawaii-fires-Aug-23/ard/04/122000331202/2023-08-09/10503F0006FE4B00-visual.tif"]
     images_pre, images_post = split_pre_post(urls, splitdate)
 
     # apply maxpre and maxpost
