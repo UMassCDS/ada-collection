@@ -24,10 +24,10 @@ def get_maxar_image_urls(disaster: str) -> List[str]:
     urls. Written on 2020-11-03, will probably break in the future due to the nature of
     webpages.
     """
-    base_url = 'https://www.maxar.com/open-data/' + disaster
+    base_url = "https://www.maxar.com/open-data/" + disaster
     response = urllib.request.urlopen(base_url)
     html = response.read()
-    html_soup = BeautifulSoup(html, 'html.parser')
+    html_soup = BeautifulSoup(html, "html.parser")
     return [
         url.strip()
         for url in html_soup.find_all("textarea")[0].text.split("\n")
@@ -35,27 +35,44 @@ def get_maxar_image_urls(disaster: str) -> List[str]:
     ]
 
 
-# TODO - this needs to be updated to new file paths/image format from MAXAR 
-# Compare the old format that the repo works, https://www.maxar.com/open-data/typhoon-mangkhut, 
-# to the new https://www.maxar.com/open-data/maui-hawaii-fires
+# Update 2023-09-18: Returns empty pre- images if not available.
 def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
-    "Split images into the pre- and post-disaster images."        
+    """Split images into the pre- and post-disaster images.
+
+    Args:
+        images (List[str]): List of image URLs.
+        splitdate (_type_): date to split pre- and post-disaster images by.
+
+    Returns:
+        Tuple[List[str], List[str]]: Tuple of pre- and post-disaster image URLs.
+    """
+
+    # Check if 'pre-' or '/pre/' exists in any of the URLs
+    if not any("pre-" in url or "/pre/" in url for url in images):
+        print(
+            "No pre-disaster image URLs available. All images will be considered post-disaster."
+        )
+        return [], images
+
     if splitdate is not None:
-        images_post = [x for x in images if datetime.strptime(x.split('/')[-2], '%Y-%m-%d') >= datetime.strptime(splitdate, '%Y-%m-%d')] 
+        images_post = [
+            x
+            for x in images
+            if datetime.strptime(x.split("/")[-2], "%Y-%m-%d")
+            >= datetime.strptime(splitdate, "%Y-%m-%d")
+        ]
         images_pre = [x for x in images if x not in images_post]
     else:
-        images_pre = [x for x in images if 'pre-' in x.split('/')[-4]]
-        images_post = [x for x in images if 'post-' in x.split('/')[-4]]
-        if len(images_pre) == 0 and len(images_post) == 0:
-            images_pre = [x for x in images if '/pre/' in x]
-            images_post = [x for x in images if '/post/' in x]
+        images_pre = [x for x in images if "pre-" in x.split("/")[-4] or "/pre/" in x]
+        images_post = [
+            x for x in images if "post-" in x.split("/")[-4] or "/post/" in x
+        ]
+
     return images_pre, images_post
 
 
 def download_images(
-    images: List[Tuple[str, str]],
-    max_threads: int = None,
-    progress_format: float = 1e6
+    images: List[Tuple[str, str]], max_threads: int = None, progress_format: float = 1e6
 ) -> None:
     """
     list: List of tuples of the form (url, destination path).
@@ -64,6 +81,7 @@ def download_images(
     progress_format: Download progress is printed as bytes / `progress_format`. For
         example, a value of 1e3 would print as kilobytes, 1e6 as megabytes, and so on.
     """
+
     # reporthook function to update the progress bars
     def _reporthook(count, block_size, total_size):
         pbar = PROGRESS_BARS[threading.get_ident()]
@@ -83,29 +101,28 @@ def download_images(
         executor.map(_download, images)
 
 
-
 @click.command()
-@click.option('--disaster', default='mauritius-oil-spill', help='name of the disaster')
-@click.option('--dest', default='input', help='destination folder')
-@click.option('--splitdate', default=None, help='split pre- and post-disaster by date')
-@click.option('--maxpre', default=1000000, help='max number of pre-disaster images')
-@click.option('--maxpost', default=1000000, help='max number of post-disaster images')
+@click.option("--disaster", default="mauritius-oil-spill", help="name of the disaster")
+@click.option("--dest", default="input", help="destination folder")
+@click.option("--splitdate", default=None, help="split pre- and post-disaster by date")
+@click.option("--maxpre", default=1000000, help="max number of pre-disaster images")
+@click.option("--maxpost", default=1000000, help="max number of post-disaster images")
 @click.option(
-    '--maxthreads',
+    "--maxthreads",
     default=None,
     type=int,
-    help="max number of download threads, if omitted Python's heuristics are used"
+    help="max number of download threads, if omitted Python's heuristics are used",
 )
 @click.option(
-    '--progress-format',
+    "--progress-format",
     type=click.Choice(["B", "KB", "MB", "GB"], case_sensitive=False),
     default="MB",
-    help="size unit to format the download progress bar"
+    help="size unit to format the download progress bar",
 )
 def main(disaster, dest, splitdate, maxpre, maxpost, maxthreads, progress_format):
     os.makedirs(dest, exist_ok=True)
-    os.makedirs(dest+'/pre-event', exist_ok=True)
-    os.makedirs(dest+'/post-event', exist_ok=True)
+    os.makedirs(dest + "/pre-event", exist_ok=True)
+    os.makedirs(dest + "/post-event", exist_ok=True)
 
     urls = get_maxar_image_urls(disaster)
     images_pre, images_post = split_pre_post(urls, splitdate)
@@ -122,10 +139,31 @@ def main(disaster, dest, splitdate, maxpre, maxpost, maxthreads, progress_format
     size_numerator = {"B": 1, "KB": 1e3, "MB": 1e6, "GB": 1e9}.get(progress_format)
 
     # generate the destination paths
-    paths = (
-        [(url, os.path.join(dest, "pre-event", url.replace("https://maxar-opendata.s3.us-west-2.amazonaws.com/events/", "").replace("/", "-"))) for url in images_pre] +
-        [(url, os.path.join(dest, "post-event", url.replace("https://maxar-opendata.s3.us-west-2.amazonaws.com/events/", "").replace("/", "-"))) for url in images_post]
-    )
+    paths = [
+        (
+            url,
+            os.path.join(
+                dest,
+                "pre-event",
+                url.replace(
+                    "https://maxar-opendata.s3.us-west-2.amazonaws.com/events/", ""
+                ).replace("/", "-"),
+            ),
+        )
+        for url in images_pre
+    ] + [
+        (
+            url,
+            os.path.join(
+                dest,
+                "post-event",
+                url.replace(
+                    "https://maxar-opendata.s3.us-west-2.amazonaws.com/events/", ""
+                ).replace("/", "-"),
+            ),
+        )
+        for url in images_post
+    ]
 
     download_images(
         images=paths,

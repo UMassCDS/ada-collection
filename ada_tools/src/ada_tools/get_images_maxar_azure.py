@@ -13,6 +13,7 @@ import click
 from azure.storage.blob import BlobClient, BlobServiceClient, ContainerClient
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+from get_images_maxar import get_maxar_image_urls, split_pre_post
 
 # Azure blob storage connection string and container name
 connection_string = os.environ["CONNECTION_STRING"]
@@ -20,44 +21,6 @@ container_name = os.environ["CONTAINER_NAME"]
 
 # Global mapping of thread ids to tqdm progress bars to show download progress.
 PROGRESS_BARS: Dict[int, tqdm] = {}
-
-
-def get_maxar_image_urls(disaster: str) -> List[str]:
-    """
-    Parse the image urls from a Maxar dataset webpage.
-
-    The webpage contains a single <textarea> containing a newline-delimited list of
-    urls. Written on 2020-11-03, will probably break in the future due to the nature of
-    webpages.
-    """
-    base_url = "https://www.maxar.com/open-data/" + disaster
-    response = urllib.request.urlopen(base_url)
-    html = response.read()
-    html_soup = BeautifulSoup(html, "html.parser")
-    return [
-        url.strip()
-        for url in html_soup.find_all("textarea")[0].text.split("\n")
-        if url.strip().endswith(".tif")
-    ]
-
-
-def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
-    "Split images into the pre- and post-disaster images."
-    if splitdate is not None:
-        images_post = [
-            x
-            for x in images
-            if datetime.strptime(x.split("/")[-2], "%Y-%m-%d")
-            >= datetime.strptime(splitdate, "%Y-%m-%d")
-        ]
-        images_pre = [x for x in images if x not in images_post]
-    else:
-        images_pre = [x for x in images if "pre-" in x.split("/")[-4]]
-        images_post = [x for x in images if "post-" in x.split("/")[-4]]
-        if len(images_pre) == 0 and len(images_post) == 0:
-            images_pre = [x for x in images if "/pre/" in x]
-            images_post = [x for x in images if "/post/" in x]
-    return images_pre, images_post
 
 
 # download images to Azure blob storage
@@ -88,7 +51,9 @@ def download_and_upload_images_to_blob(
         pbar.total = total_size / progress_format
         pbar.update(block_size / progress_format)
 
-    def upload_stream_to_blob(blob_name: Optional[str], data_stream: io.BytesIO) -> None:
+    def upload_stream_to_blob(
+        blob_name: Optional[str], data_stream: io.BytesIO
+    ) -> None:
         blob_client = container_client.get_blob_client(blob_name)
         blob_client.upload_blob(data_stream)
 
@@ -103,7 +68,7 @@ def download_and_upload_images_to_blob(
 
         # Streaming read function
         def _streaming_read(response: Optional[Any], buffer_size: int = 8192) -> bytes:
-            '''
+            """
             Reads a response in chunks and yields the chunks.
             Note: The response header neesd have "Content-Length" to calculate the progress.
             https://stackoverflow.com/a/41107237
@@ -112,12 +77,14 @@ def download_and_upload_images_to_blob(
             buffer_size: size of each chunk
 
             returns: generator of bytes
-            '''
+            """
             try:
                 total_size = int(response.headers["Content-Length"])
             except KeyError:
-                print("Content-Length not found in response headers. Progress bar disabled.", 
-                      file=sys.stderr)
+                print(
+                    "Content-Length not found in response headers. Progress bar disabled.",
+                    file=sys.stderr,
+                )
                 total_size = None
 
             count = 0
@@ -201,7 +168,6 @@ def main(disaster, dest, splitdate, maxpre, maxpost, maxthreads, progress_format
         )
         for url in images_post
     ]
-
 
     download_and_upload_images_to_blob(
         images=paths,
