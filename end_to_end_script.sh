@@ -28,4 +28,4 @@ conda activate caladriusenv
 CUDA_VISIBLE_DEVICES="0" python $CALADRIUS/caladrius/run.py --run-name run --data-path $WORKSPACE/caladrius --model-type attentive --model-path best_model_wts.pkl --checkpoint-path $WORKSPACE/caladrius/runs --batch-size 2 --classification-loss-type f1 --output-type classification --inference
 conda activate abdenv
 final-layer --builds $WORKSPACE/abd/buildings-clean.geojson --damage $WORKSPACE/caladrius/runs/run-input_size_32-learning_rate_0.001-batch_size_2/predictions/run-split_inference-epoch_001-model_attentive-predictions.txt --out $WORKSPACE/buildings-predictions.geojson --thresh 1
-setup-discount --input $WORKSPACE/buildings-predictions.geojson
+setup-discount --input $WORKSPACE/buildings-predictions.geojson --outdir $WORKSPACE/tiles --out-csv $WORKSPACE/annotations.csv --out-sample $WORKSPACE/samples.csv
