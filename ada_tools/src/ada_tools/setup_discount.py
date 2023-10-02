@@ -1,16 +1,17 @@
+from collections import defaultdict
+import json
+import os
+from pathlib import Path
+import re
+
+import click
 import geopandas as gpd
 from mercantile import bounds, Tile
-from shapely.geometry import box
-import click
-import os
 import numpy as np
 import pandas as pd
-import json
-import glob
-from collections import defaultdict
 import rasterio
 from rasterio.warp import transform_bounds
-import re
+from shapely.geometry import box
 
 EPS = 4e-2
 np.random.seed(0)
@@ -34,12 +35,29 @@ def get_tiff_url(tile_bounds, bounds_and_urls):
             return url
     return None
 
+def get_image_dir_contents(image_dir):
+    dir_path = Path(image_dir)
+    if not (dir_path.exists() and dir_path.is_dir()):
+        raise ValueError(f"Image directory does not exist: {image_dir}")
+
+    image_bounds_and_urls = [] 
+    for tif_path in dir_path.glob('*.tif'):
+
+        tile_url = get_url(tif_path.name)
+        with rasterio.open(tif_path) as geo_image_file:
+            tiff_bounds = transform_bounds(geo_image_file.crs, 'epsg:4326', *geo_image_file.bounds) 
+            image_bounds_and_urls.append((box(*tiff_bounds), tile_url))
+
+    return image_bounds_and_urls
+
 @click.command()
 @click.option('--input', help='input predictions')
+@click.option('--pre-images', help='directory containing pre-disaster images')
+@click.option('--post-images', help='directory containing post-distaster images')
 @click.option('--outdir', default='tiles', help='directory containing all tile geojsons')
 @click.option('--out-csv', default="annotations.csv", help='file containing all tile ids and annotator info')
 
-def main(input, outdir, out_csv):
+def main(input, pre_images, post_images, outdir, out_csv):
     gdf = gpd.read_file(input)
     gdf = gdf[gdf["damage"] >= 1.0]
 
@@ -60,26 +78,10 @@ def main(input, outdir, out_csv):
 
     tile_to_sample_map = defaultdict(list)
 
+    # add event bounds
+    pre_bounds_and_urls = get_image_dir_contents(pre_images)
+    post_bounds_and_urls = get_image_dir_contents(post_images)
 
-    # add pre_event_bounds
-    pre_bounds_and_urls = []
-    for pre_path in glob.glob('images/pre-event/*.tif'):
-        tile_url = get_url(pre_path.split('/')[-1])
-        with rasterio.open(pre_path) as geo_image_file:
-            tiff_bounds = transform_bounds(geo_image_file.crs, 'epsg:4326', *geo_image_file.bounds) 
-            pre_bounds_and_urls.append((box(*tiff_bounds), tile_url))
-
-    post_bounds_and_urls = []
-    for post_path in glob.glob('images/post-event/*.tif'):
-        tile_url = get_url(post_path.split('/')[-1])
-        with rasterio.open(post_path) as geo_image_file:
-            tiff_bounds = transform_bounds(geo_image_file.crs, 'epsg:4326', *geo_image_file.bounds)
-            post_bounds_and_urls.append((box(*tiff_bounds), tile_url))
-
-
-
-
-    #  add post event bounds
     for i, sample in enumerate(samples):
         tile_to_sample_map[sample] += [i]
 
