@@ -38,9 +38,8 @@ def get_tiff_url(tile_bounds, bounds_and_urls):
 @click.option('--input', help='input predictions')
 @click.option('--outdir', default='tiles', help='directory containing all tile geojsons')
 @click.option('--out-csv', default="annotations.csv", help='file containing all tile ids and annotator info')
-@click.option('--out-sample', default="samples.csv", help='file containing discount sampled tile ids')
 
-def main(input, outdir, out_csv, out_sample):
+def main(input, outdir, out_csv):
     gdf = gpd.read_file(input)
     gdf = gdf[gdf["damage"] >= 1.0]
 
