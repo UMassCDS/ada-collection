@@ -92,12 +92,11 @@ def main(input, pre_images, post_images, outdir, out_csv):
     pre_bounds_and_urls = get_image_dir_contents(pre_images)
     post_bounds_and_urls = get_image_dir_contents(post_images)
 
-
     for i, tile_id in enumerate(tile_ids):
         df = gdf.loc[gdf["TILE_ID"] == tile_id]
         tile_bounds = get_tile_bounds(tile_id)
         df_geojson = json.loads(df.to_json())
-        df_geojson['indexes'] = tile_to_sample_map[tile_id]
+        df_geojson['indexes'] = tile_to_sample_map.get(tile_id, [])
         df_geojson['tile_bbox'] = ','.join([str(c) for c in tile_bounds])
         df_geojson['annotated'] = False
         df_geojson['detector_count'] = detector_counts[i]
