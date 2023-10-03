@@ -82,7 +82,7 @@ def main(input, pre_images, post_images, outdir, out_csv):
     sample_order = np.arange(len(samples), dtype=int)
     sample_tracking_df = pd.DataFrame({tile_id_key: samples, "ordering": sample_order})
     display_order = sample_tracking_df.groupby(tile_id_key)["ordering"].min().reset_index()
-    tiles_df = pd.merge(tiles_df, display_order, on=tile_id_key).sort_values(by="ordering")
+    tiles_df = pd.merge(tiles_df, display_order, how="left", on=tile_id_key).sort_values(by="ordering")
     tiles_df.to_csv(out_csv, index=False, columns=[tile_id_key, "detector_count", "true_count", "Annotator"])
 
     # Collect sample indices to be written to each tile's geoJSON file
