@@ -1,4 +1,3 @@
-from collections import defaultdict
 import json
 import os
 from pathlib import Path
