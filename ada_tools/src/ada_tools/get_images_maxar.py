@@ -35,11 +35,26 @@ def get_maxar_image_urls(disaster: str) -> List[str]:
     ]
 
 
-# TODO - this needs to be updated to new file paths/image format from MAXAR
-# Compare the old format that the repo works, https://www.maxar.com/open-data/typhoon-mangkhut,
-# to the new https://www.maxar.com/open-data/maui-hawaii-fires
+
+# Update 2023-09-18: Returns empty pre- images if not available.
 def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
-    "Split images into the pre- and post-disaster images."
+    """Split images into the pre- and post-disaster images.
+
+    Args:
+        images (List[str]): List of image URLs.
+        splitdate (_type_): date to split pre- and post-disaster images by.
+
+    Returns:
+        Tuple[List[str], List[str]]: Tuple of pre- and post-disaster image URLs.
+    """
+
+    # Check if 'pre-' or '/pre/' exists in any of the URLs
+    if not any("pre-" in url or "/pre/" in url for url in images):
+        print(
+            "No pre-disaster image URLs available. All images will be considered post-disaster."
+        )
+        return [], images
+
     if splitdate is not None:
         images_post = [
             x
@@ -49,11 +64,12 @@ def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
         ]
         images_pre = [x for x in images if x not in images_post]
     else:
-        images_pre = [x for x in images if "pre-" in x.split("/")[-4]]
-        images_post = [x for x in images if "post-" in x.split("/")[-4]]
-        if len(images_pre) == 0 and len(images_post) == 0:
-            images_pre = [x for x in images if "/pre/" in x]
-            images_post = [x for x in images if "/post/" in x]
+
+        images_pre = [x for x in images if "pre-" in x.split("/")[-4] or "/pre/" in x]
+        images_post = [
+            x for x in images if "post-" in x.split("/")[-4] or "/post/" in x
+        ]
+
     return images_pre, images_post
 
 

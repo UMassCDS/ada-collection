@@ -13,6 +13,7 @@ import click
 from azure.storage.blob import BlobClient, BlobServiceClient, ContainerClient
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+from get_images_maxar import get_maxar_image_urls, split_pre_post
 
 # Azure blob storage connection string and container name
 connection_string = os.environ["CONNECTION_STRING"]
@@ -20,44 +21,6 @@ container_name = os.environ["CONTAINER_NAME"]
 
 # Global mapping of thread ids to tqdm progress bars to show download progress.
 PROGRESS_BARS: Dict[int, tqdm] = {}
-
-
-def get_maxar_image_urls(disaster: str) -> List[str]:
-    """
-    Parse the image urls from a Maxar dataset webpage.
-
-    The webpage contains a single <textarea> containing a newline-delimited list of
-    urls. Written on 2020-11-03, will probably break in the future due to the nature of
-    webpages.
-    """
-    base_url = "https://www.maxar.com/open-data/" + disaster
-    response = urllib.request.urlopen(base_url)
-    html = response.read()
-    html_soup = BeautifulSoup(html, "html.parser")
-    return [
-        url.strip()
-        for url in html_soup.find_all("textarea")[0].text.split("\n")
-        if url.strip().endswith(".tif")
-    ]
-
-
-def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
-    "Split images into the pre- and post-disaster images."
-    if splitdate is not None:
-        images_post = [
-            x
-            for x in images
-            if datetime.strptime(x.split("/")[-2], "%Y-%m-%d")
-            >= datetime.strptime(splitdate, "%Y-%m-%d")
-        ]
-        images_pre = [x for x in images if x not in images_post]
-    else:
-        images_pre = [x for x in images if "pre-" in x.split("/")[-4]]
-        images_post = [x for x in images if "post-" in x.split("/")[-4]]
-        if len(images_pre) == 0 and len(images_post) == 0:
-            images_pre = [x for x in images if "/pre/" in x]
-            images_post = [x for x in images if "/post/" in x]
-    return images_pre, images_post
 
 
 # download images to Azure blob storage
