@@ -2,6 +2,7 @@
 Setup.py file.
 Install once-off with:  "pip install ."
 For development:        "pip install -e .[dev]"
+For testing:            "pip install -e .[test]"
 """
 import setuptools
 
@@ -19,12 +20,17 @@ setuptools.setup(
     install_requires=install_requires,
     extras_require={
         "dev": [  # Place NON-production dependencies in this list - so for DEVELOPMENT ONLY!
-            "black",
-            "flake8"
+            "black",  # Code formatter
+            "flake8",  # Linter
+        ],
+        "test": [  # Place testing dependencies in this list
+            "pytest",  # The core test library
+            "pytest-cov",  # Provides the --cov flag
+            "pytest-mock",  # Provides the mocker fixture
         ],
     },
     entry_points={
-        'console_scripts': [
+        "console_scripts": [
             f"load-images = {PROJECT_NAME}.get_images_maxar:main",
             f"load-images-azure = {PROJECT_NAME}.get_images_maxar_azure:main",
             f"filter-images = {PROJECT_NAME}.filter_images:main",
@@ -36,7 +42,7 @@ setuptools.setup(
             f"merge-output = {PROJECT_NAME}.merge_output:main",
             f"align-raster = {PROJECT_NAME}.align_raster:main",
             f"check-alternative-buildings = {PROJECT_NAME}.check_alternative_buildings:main",
-            f"setup-discount = {PROJECT_NAME}.setup_discount:main"
+            f"setup-discount = {PROJECT_NAME}.setup_discount:main",
         ]
-    }
+    },
 )
