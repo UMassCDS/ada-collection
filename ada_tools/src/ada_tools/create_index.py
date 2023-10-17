@@ -16,9 +16,10 @@ import pathlib
 from tqdm import tqdm
 
 
-class Tile():
-
-    def __init__(self, xmin=None, ymin=None, xmax=None, ymax=None, x=None, y=None, z=None):
+class Tile:
+    def __init__(
+        self, xmin=None, ymin=None, xmax=None, ymax=None, x=None, y=None, z=None
+    ):
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax
@@ -29,13 +30,18 @@ class Tile():
 
     def __str__(self):
         if self.is_set():
-            bbox = '%s, %s, %s, %s' % (self.xmin, self.ymin, self.xmax, self.ymax)
+            bbox = "%s, %s, %s, %s" % (self.xmin, self.ymin, self.xmax, self.ymax)
         else:
-            bbox = 'not set'
-        return 'Tile[bbox: %s, x: %s, y: %s, z: %s]' % (bbox, self.x, self.y, self.z)
+            bbox = "not set"
+        return "Tile[bbox: %s, x: %s, y: %s, z: %s]" % (bbox, self.x, self.y, self.z)
 
     def is_set(self):
-        return self.xmin is not None and self.ymin is not None and self.xmax is not None and self.ymax is not None
+        return (
+            self.xmin is not None
+            and self.ymin is not None
+            and self.xmax is not None
+            and self.ymax is not None
+        )
 
     def get_geometry(self):
         return box(self.xmin, self.ymin, self.xmax, self.ymax)
@@ -45,13 +51,12 @@ class Tile():
 
 
 class TileCollection(list):
-
     def __init__(self):
         self.geom = None
         self.extent = None
 
     def __str__(self):
-        return 'TileCollection[tiles: %s]' % len(self)
+        return "TileCollection[tiles: %s]" % len(self)
 
     def generate_tiles(self, geom, z):
         self.geom = geom
@@ -72,59 +77,57 @@ class TileCollection(list):
 
     def export_shapefile(self, filename):
         if len(self) < 1:
-            print('no tiles to save')
+            print("no tiles to save")
             return
 
         schema = {
-            'geometry': 'Polygon',
-            'properties': {
-                'id': 'int',
-                'x': 'int',
-                'y': 'int',
-                'z': 'int'
-            },
+            "geometry": "Polygon",
+            "properties": {"id": "int", "x": "int", "y": "int", "z": "int"},
         }
 
-        with fiona.open(filename, 'w', 'ESRI Shapefile', schema) as c:
+        with fiona.open(filename, "w", "ESRI Shapefile", schema) as c:
             tile_count = 1
             for t in self:
                 geom = t.get_geometry()
-                c.write({
-                    'geometry': mapping(geom),
-                    'properties': {
-                        'id': tile_count,
-                        'x': t.x,
-                        'y': t.y,
-                        'z': t.z
-                    },
-                })
+                c.write(
+                    {
+                        "geometry": mapping(geom),
+                        "properties": {"id": tile_count, "x": t.x, "y": t.y, "z": t.z},
+                    }
+                )
                 tile_count += 1
 
     def export_geometry_shapefile(self, filename):
         if self.geom is None:
-            print('no tiles to save')
+            print("no tiles to save")
             return
 
         schema = {
-            'geometry': 'Polygon',
-            'properties': {'id': 'int'},
+            "geometry": "Polygon",
+            "properties": {"id": "int"},
         }
 
-        with fiona.open(filename, 'w', 'ESRI Shapefile', schema) as c:
-            c.write({
-                'geometry': mapping(self.geom),
-                'properties': {'id': 0},
-            })
+        with fiona.open(filename, "w", "ESRI Shapefile", schema) as c:
+            c.write(
+                {
+                    "geometry": mapping(self.geom),
+                    "properties": {"id": 0},
+                }
+            )
 
     def deg2tile(self, lat_deg, lon_deg, zoom):
         lat_rad = math.radians(lat_deg)
-        n = 2.0 ** zoom
+        n = 2.0**zoom
         xtile = int((lon_deg + 180.0) / 360.0 * n)
-        ytile = int((1.0 - math.log(math.tan(lat_rad) + (1.0 / math.cos(lat_rad))) / math.pi) / 2.0 * n)
+        ytile = int(
+            (1.0 - math.log(math.tan(lat_rad) + (1.0 / math.cos(lat_rad))) / math.pi)
+            / 2.0
+            * n
+        )
         return (xtile, ytile)
 
     def tileGeometry(self, x, y, z):
-        n = 2.0 ** z
+        n = 2.0**z
         xmin = x / n * 360.0 - 180.0
         xmax = (x + 1) / n * 360.0 - 180
         ymin = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
@@ -133,11 +136,11 @@ class TileCollection(list):
 
 
 def get_raster_in_dir(directory):
-    rasters = sorted(Path(directory).rglob('*.tif'))
+    rasters = sorted(Path(directory).rglob("*.tif"))
     if len(rasters) == 0:
-        rasters = sorted(Path(directory).rglob('*.TIF'))
+        rasters = sorted(Path(directory).rglob("*.TIF"))
     if len(rasters) == 0:
-        print('ERROR: no rasters found in', directory)
+        print("ERROR: no rasters found in", directory)
         return 0
     else:
         return rasters
@@ -159,9 +162,11 @@ def divide_images(
     structure or on the date of the disaster. Returns two lists, the first with
     pre-disaster image paths and the second with post-disaster image paths.
     """
-    if os.path.exists(os.path.join(folder, 'pre-event')) and os.path.exists(os.path.join(folder, 'post-event')):
-        rasters_pre = get_raster_in_dir(os.path.join(folder, 'pre-event'))
-        rasters_post = get_raster_in_dir(os.path.join(folder, 'post-event'))
+    if os.path.exists(os.path.join(folder, "pre-event")) and os.path.exists(
+        os.path.join(folder, "post-event")
+    ):
+        rasters_pre = get_raster_in_dir(os.path.join(folder, "pre-event"))
+        rasters_post = get_raster_in_dir(os.path.join(folder, "post-event"))
     else:
         rasters_all = get_raster_in_dir(folder)
         rasters_pre, rasters_post = [], []
@@ -174,12 +179,14 @@ def divide_images(
                 rasters_post.append(raster)
 
     if len(rasters_pre) == 0 or len(rasters_post) == 0:
-        raise Exception('ERROR: cannot divide pre- and post-event images')
+        raise Exception("ERROR: cannot divide pre- and post-event images")
 
     return rasters_pre, rasters_post
 
 
-def get_extents(rasters_pre: List[str], rasters_post: List[str], rasters_crs: str) -> gpd.GeoDataFrame:
+def get_extents(
+    rasters_pre: List[str], rasters_post: List[str], rasters_crs: str
+) -> gpd.GeoDataFrame:
     """
     Get the geographical boundary of each raster image.
 
@@ -200,60 +207,81 @@ def get_extents(rasters_pre: List[str], rasters_post: List[str], rasters_crs: st
             try:
                 bounds = raster_meta.bounds
             except:
-                print('WARNING: raster has no bounds in tags')
+                print("WARNING: raster has no bounds in tags")
                 bounds = np.nan
-            if 'crs' in raster_meta.meta.keys():
-                if 'init' in raster_meta.meta['crs'].to_dict().keys():
-                    crs = raster_meta.meta['crs'].to_dict()['init']
+            if "crs" in raster_meta.meta.keys():
+                if "init" in raster_meta.meta["crs"].to_dict().keys():
+                    crs = raster_meta.meta["crs"].to_dict()["init"]
                 else:
-                    wkt_str = str(raster_meta.meta['crs'])
-                    match_epsg = re.findall(r'\"[0-9]{4}\"|\"[0-9]{5}\"', wkt_str)
+                    wkt_str = str(raster_meta.meta["crs"])
+                    match_epsg = re.findall(r"\"[0-9]{4}\"|\"[0-9]{5}\"", wkt_str)
                     if len(match_epsg) > 0:
                         crs = f"EPSG:{match_epsg[-1][1:-1]}"
                     else:
-                        print(f'WARNING: no EPSG code found in raster CRS, assigning {rasters_crs}')
+                        print(
+                            f"WARNING: no EPSG code found in raster CRS, assigning {rasters_crs}"
+                        )
                         print(wkt_str)
                         crs = rasters_crs
             else:
-                print(f'WARNING: raster has no CRS in tags, assigning {rasters_crs}')
+                print(f"WARNING: raster has no CRS in tags, assigning {rasters_crs}")
                 crs = rasters_crs
             if raster in rasters_pre:
-                tag = 'pre-event'
+                tag = "pre-event"
             else:
-                tag = 'post-event'
+                tag = "post-event"
             raster_str = str(raster)
             path = pathlib.PurePath(raster_str)
-            if 'pre-event' in path.parent.name or 'post-event' in path.parent.name:
+            if "pre-event" in path.parent.name or "post-event" in path.parent.name:
                 raster_relative_data = os.path.join(path.parent.name, path.name)
             else:
                 raster_relative_data = path.name
             raster_relative_data = str(raster_relative_data)
-            df = pd.concat([df, pd.DataFrame({
-                    'file': raster_relative_data,
-                    'crs': crs,
-                    'geometry': box(*bounds),
-                    'pre-post': tag
-                }, index=[0])], ignore_index=True)
+            df = pd.concat(
+                [
+                    df,
+                    pd.DataFrame(
+                        {
+                            "file": raster_relative_data,
+                            "crs": crs,
+                            "geometry": box(*bounds),
+                            "pre-post": tag,
+                        },
+                        index=[0],
+                    ),
+                ],
+                ignore_index=True,
+            )
 
     gdf = gpd.GeoDataFrame()
     if df.crs.nunique() > 1:
-        print(f'WARNING: multiple CRS found {df.crs.unique()}, reprojecting to {rasters_crs}')
+        print(
+            f"WARNING: multiple CRS found {df.crs.unique()}, reprojecting to {rasters_crs}"
+        )
         for crs in df.crs.unique():
-            df_crs = df[df['crs'] == crs].copy()
-            gdf_crs = gpd.GeoDataFrame({'geometry': df_crs.geometry.tolist(),
-                                        'file': df_crs.file.tolist(),
-                                        'pre-post': df_crs['pre-post'].tolist()},
-                                       crs=crs)
+            df_crs = df[df["crs"] == crs].copy()
+            gdf_crs = gpd.GeoDataFrame(
+                {
+                    "geometry": df_crs.geometry.tolist(),
+                    "file": df_crs.file.tolist(),
+                    "pre-post": df_crs["pre-post"].tolist(),
+                },
+                crs=crs,
+            )
             if crs != rasters_crs:
                 gdf_crs = gdf_crs.to_crs(rasters_crs)
             gdf = gdf.append(gdf_crs, ignore_index=True)
     else:
         print(df)
         print(crs)
-        gdf = gpd.GeoDataFrame({'geometry': df.geometry.tolist(),
-                                'file': df.file.tolist(),
-                                'pre-post': df['pre-post'].tolist()},
-                               crs=crs)
+        gdf = gpd.GeoDataFrame(
+            {
+                "geometry": df.geometry.tolist(),
+                "file": df.file.tolist(),
+                "pre-post": df["pre-post"].tolist(),
+            },
+            crs=crs,
+        )
     return gdf
 
 
@@ -271,45 +299,51 @@ def generate_dummy_tiles(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     for ix, row in gdf.iterrows():
         filename = row["file"]
         m = re.search("[0-9]{12}", filename)
-        df_tiles = df_tiles.append(pd.Series({'tile': m.group(0)}), ignore_index=True)
+        df_tiles = df_tiles.append(pd.Series({"tile": m.group(0)}), ignore_index=True)
 
-    df_tiles['pre-event'] = [[] for x in range(len(df_tiles))]
-    df_tiles['post-event'] = [[] for x in range(len(df_tiles))]
+    df_tiles["pre-event"] = [[] for x in range(len(df_tiles))]
+    df_tiles["post-event"] = [[] for x in range(len(df_tiles))]
     for ixt, rowt in df_tiles.iterrows():
         pre_event_images, post_event_images = [], []
         gdf_ = gdf[gdf["file"].str.contains(rowt["tile"])]
         geom = None
         for ix, row in gdf_.iterrows():
             geom = row["geometry"]
-            if row['pre-post'] == 'pre-event':
-                pre_event_images.append(row['file'])
+            if row["pre-post"] == "pre-event":
+                pre_event_images.append(row["file"])
             else:
-                post_event_images.append(row['file'])
+                post_event_images.append(row["file"])
         if len(pre_event_images) > 0:
-            df_tiles.at[ixt, 'pre-event'] = pre_event_images
+            df_tiles.at[ixt, "pre-event"] = pre_event_images
         else:
-            df_tiles.at[ixt, 'pre-event'] = np.nan
+            df_tiles.at[ixt, "pre-event"] = np.nan
         if len(post_event_images) > 0:
-            df_tiles.at[ixt, 'post-event'] = post_event_images
+            df_tiles.at[ixt, "post-event"] = post_event_images
         else:
-            df_tiles.at[ixt, 'post-event'] = np.nan
-        df_tiles.at[ixt, 'geometry'] = geom
+            df_tiles.at[ixt, "post-event"] = np.nan
+        df_tiles.at[ixt, "geometry"] = geom
 
     # drop tiles that do not contain both pre- and post-event images
-    df_tiles = df_tiles[(~pd.isna(df_tiles['pre-event'])) & (~pd.isna(df_tiles['post-event']))]
+    df_tiles = df_tiles[
+        (~pd.isna(df_tiles["pre-event"])) & (~pd.isna(df_tiles["post-event"]))
+    ]
 
     # The pre-event and post-event columns contain lists of filenames, but geopandas
     # doesn't allow lists as GeoJSON properties to maintain compatibility with
     # shapefiles. We can work around this by converting them to dictionaries.
-    df_tiles.loc[:, "pre-event"] = df_tiles["pre-event"].map(lambda l: dict(enumerate(l)))
-    df_tiles.loc[:, "post-event"] = df_tiles["post-event"].map(lambda l: dict(enumerate(l)))
+    df_tiles.loc[:, "pre-event"] = df_tiles["pre-event"].map(
+        lambda l: dict(enumerate(l))
+    )
+    df_tiles.loc[:, "post-event"] = df_tiles["post-event"].map(
+        lambda l: dict(enumerate(l))
+    )
 
     gdf_tiles = gpd.GeoDataFrame(
         {
-            'geometry': df_tiles.geometry.tolist(),
-            'tile': df_tiles.tile.tolist(),
-            'pre-event': df_tiles['pre-event'].tolist(),
-            'post-event': df_tiles['post-event'].tolist()
+            "geometry": df_tiles.geometry.tolist(),
+            "tile": df_tiles.tile.tolist(),
+            "pre-event": df_tiles["pre-event"].tolist(),
+            "post-event": df_tiles["post-event"].tolist(),
         },
         crs=gdf.crs,
     )
@@ -333,7 +367,7 @@ def generate_tiles(gdf: gpd.GeoDataFrame, zoom: int) -> gpd.GeoDataFrame:
     # Convert to WGS84 (EPSG:4326, the usual degrees of latitude and longitude) and get
     # the total area (i.e. the union of all bounding boxes).
     orig_crs = gdf.crs
-    gdf_wgs = gdf.copy() #to_crs('EPSG:4326')
+    gdf_wgs = gdf.copy()  # to_crs('EPSG:4326')
     total_bounds = box(*gdf_wgs.total_bounds)
 
     # Divide the area of `total_bounds` into tiles with their size determined by the
@@ -346,19 +380,25 @@ def generate_tiles(gdf: gpd.GeoDataFrame, zoom: int) -> gpd.GeoDataFrame:
     df_tiles = pd.DataFrame()
     for tile in tc:
         bounds_tile = np.array([tile.xmin, tile.ymin, tile.xmax, tile.ymax])
-        df_tiles = pd.concat([df_tiles,
-                              pd.Series(
-                                  {
-                                      'geometry': box(*bounds_tile),
-                                      'tile': str(zoom_level)+'.'+str(tile.x)+'.'+str(tile.y)
-                                  }
-                              )], axis=1, ignore_index=True)
+        df_tiles = pd.concat(
+            [
+                df_tiles,
+                pd.Series(
+                    {
+                        "geometry": box(*bounds_tile),
+                        "tile": str(zoom_level) + "." + str(tile.x) + "." + str(tile.y),
+                    }
+                ),
+            ],
+            axis=1,
+            ignore_index=True,
+        )
 
     df_tiles = df_tiles.T
     # convert to GeoDataFrame
     gdf_tiles = gpd.GeoDataFrame(
-        {'geometry': df_tiles.geometry.tolist(), 'tile': df_tiles.tile.tolist()},
-        crs=orig_crs, #'EPSG:4326',
+        {"geometry": df_tiles.geometry.tolist(), "tile": df_tiles.tile.tolist()},
+        crs=orig_crs,  #'EPSG:4326',
     )
 
     # convert back from EPSG:4326 to whatever the default was
@@ -380,47 +420,53 @@ def assign_images_to_tiles(
 
     Returns the `df_tiles` input argument.
     """
-    df_tiles['pre-event'] = [[] for x in range(len(df_tiles))]
-    df_tiles['post-event'] = [[] for x in range(len(df_tiles))]
+    df_tiles["pre-event"] = [[] for x in range(len(df_tiles))]
+    df_tiles["post-event"] = [[] for x in range(len(df_tiles))]
     for ixt, rowt in df_tiles.iterrows():
         pre_event_images, post_event_images = [], []
         for ix, row in gdf.iterrows():
-            bounds_image = rasterio.coords.BoundingBox(*row['geometry'].bounds)
-            bounds_tile = rasterio.coords.BoundingBox(*rowt['geometry'].bounds)
+            bounds_image = rasterio.coords.BoundingBox(*row["geometry"].bounds)
+            bounds_tile = rasterio.coords.BoundingBox(*rowt["geometry"].bounds)
             if not rasterio.coords.disjoint_bounds(bounds_image, bounds_tile):
-                if row['pre-post'] == 'pre-event':
-                    pre_event_images.append(row['file'])
+                if row["pre-post"] == "pre-event":
+                    pre_event_images.append(row["file"])
                 else:
-                    post_event_images.append(row['file'])
+                    post_event_images.append(row["file"])
         if len(pre_event_images) > 0:
-            df_tiles.at[ixt, 'pre-event'] = pre_event_images
+            df_tiles.at[ixt, "pre-event"] = pre_event_images
         else:
-            df_tiles.at[ixt, 'pre-event'] = np.nan
+            df_tiles.at[ixt, "pre-event"] = np.nan
         if len(post_event_images) > 0:
-            df_tiles.at[ixt, 'post-event'] = post_event_images
+            df_tiles.at[ixt, "post-event"] = post_event_images
         else:
-            df_tiles.at[ixt, 'post-event'] = np.nan
+            df_tiles.at[ixt, "post-event"] = np.nan
 
     # drop tiles that do not contain both pre- and post-event images
-    df_tiles = df_tiles[(~pd.isna(df_tiles['pre-event'])) & (~pd.isna(df_tiles['post-event']))]
+    df_tiles = df_tiles[
+        (~pd.isna(df_tiles["pre-event"])) & (~pd.isna(df_tiles["post-event"]))
+    ]
 
     # The pre-event and post-event columns contain lists of filenames, but geopandas
     # doesn't allow lists as GeoJSON properties to maintain compatibility with
     # shapefiles. We can work around this by converting them to dictionaries.
-    df_tiles.loc[:, "pre-event"] = df_tiles["pre-event"].map(lambda l: dict(enumerate(l)))
-    df_tiles.loc[:, "post-event"] = df_tiles["post-event"].map(lambda l: dict(enumerate(l)))
+    df_tiles.loc[:, "pre-event"] = df_tiles["pre-event"].map(
+        lambda l: dict(enumerate(l))
+    )
+    df_tiles.loc[:, "post-event"] = df_tiles["post-event"].map(
+        lambda l: dict(enumerate(l))
+    )
 
     return df_tiles
 
 
 @click.command()
-@click.option('--data', default='input', help='input')
-@click.option('--crs', default='EPSG:4326', help='imagery CRS')
-@click.option('--date', default='2020-08-04', help='date of the event YYYY-MM-DD')
-@click.option('--zoom', default=12, help='zoom level of the tiles')
-@click.option('--dest', default='tile_index.geojson', help='output')
-@click.option('--exte', default='', help='save extents as')
-@click.option('--maxar-tiling/--no-maxar-tiling', default=False)
+@click.option("--data", default="input", help="input")
+@click.option("--crs", default="EPSG:4326", help="imagery CRS")
+@click.option("--date", default="2020-08-04", help="date of the event YYYY-MM-DD")
+@click.option("--zoom", default=12, help="zoom level of the tiles")
+@click.option("--dest", default="tile_index.geojson", help="output")
+@click.option("--exte", default="", help="save extents as")
+@click.option("--maxar-tiling/--no-maxar-tiling", default=False)
 def main(data, crs, date, zoom, dest, exte, maxar_tiling):
     """
     Using the images in the `data` folder, divide the area into tiles.  The output
@@ -431,11 +477,15 @@ def main(data, crs, date, zoom, dest, exte, maxar_tiling):
     rasters_pre, rasters_post = divide_images(data, date_event)
     print("getting image extents")
     gdf = get_extents(rasters_pre, rasters_post, crs)
-    if exte != '':
-        gdf_pre = gdf[gdf['pre-post'] == 'pre-event']
-        gdf_pre.to_file(exte.replace('.geojson', '-pre-event.geojson'), driver="GeoJSON")
-        gdf_pos = gdf[gdf['pre-post'] == 'post-event']
-        gdf_pos.to_file(exte.replace('.geojson', '-post-event.geojson'), driver="GeoJSON")
+    if exte != "":
+        gdf_pre = gdf[gdf["pre-post"] == "pre-event"]
+        gdf_pre.to_file(
+            exte.replace(".geojson", "-pre-event.geojson"), driver="GeoJSON"
+        )
+        gdf_pos = gdf[gdf["pre-post"] == "post-event"]
+        gdf_pos.to_file(
+            exte.replace(".geojson", "-post-event.geojson"), driver="GeoJSON"
+        )
     if maxar_tiling:
         print("generating dummy tiles")
         df_tiles = generate_dummy_tiles(gdf)

@@ -88,7 +88,9 @@ def download_and_upload_images_to_blob(
         pbar.total = total_size / progress_format
         pbar.update(block_size / progress_format)
 
-    def upload_stream_to_blob(blob_name: Optional[str], data_stream: io.BytesIO) -> None:
+    def upload_stream_to_blob(
+        blob_name: Optional[str], data_stream: io.BytesIO
+    ) -> None:
         blob_client = container_client.get_blob_client(blob_name)
         blob_client.upload_blob(data_stream)
 
@@ -103,7 +105,7 @@ def download_and_upload_images_to_blob(
 
         # Streaming read function
         def _streaming_read(response: Optional[Any], buffer_size: int = 8192) -> bytes:
-            '''
+            """
             Reads a response in chunks and yields the chunks.
             Note: The response header neesd have "Content-Length" to calculate the progress.
             https://stackoverflow.com/a/41107237
@@ -112,12 +114,14 @@ def download_and_upload_images_to_blob(
             buffer_size: size of each chunk
 
             returns: generator of bytes
-            '''
+            """
             try:
                 total_size = int(response.headers["Content-Length"])
             except KeyError:
-                print("Content-Length not found in response headers. Progress bar disabled.", 
-                      file=sys.stderr)
+                print(
+                    "Content-Length not found in response headers. Progress bar disabled.",
+                    file=sys.stderr,
+                )
                 total_size = None
 
             count = 0
@@ -201,7 +205,6 @@ def main(disaster, dest, splitdate, maxpre, maxpost, maxthreads, progress_format
         )
         for url in images_post
     ]
-
 
     download_and_upload_images_to_blob(
         images=paths,
