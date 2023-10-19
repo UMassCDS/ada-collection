@@ -35,6 +35,7 @@ def get_maxar_image_urls(disaster: str) -> List[str]:
     ]
 
 
+
 # Update 2023-09-18: Returns empty pre- images if not available.
 def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
     """Split images into the pre- and post-disaster images.
@@ -63,6 +64,7 @@ def split_pre_post(images: List[str], splitdate) -> Tuple[List[str], List[str]]:
         ]
         images_pre = [x for x in images if x not in images_post]
     else:
+
         images_pre = [x for x in images if "pre-" in x.split("/")[-4] or "/pre/" in x]
         images_post = [
             x for x in images if "post-" in x.split("/")[-4] or "/post/" in x
