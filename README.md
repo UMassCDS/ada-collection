@@ -115,7 +115,8 @@ final-layer --builds <workspace>/abd/buildings-clean.geojson --damage <workspace
 ```
 8) Run the DISCount algorithm 
 ```
-setup-discount --input $WORKSPACE/buildings-predictions.geojson
+setup-discount --input <workspace>/buildings-predictions.geojson --pre-images <workspace>/images/pre-event --post-images <workspace>/images/post-event --outdir <workspace>/tiles --out-csv <workspace>/annotations.csv 
 ```
 - This step aggregates all GeoJSONs in the tile level and runs a sampling algorithm to produce a GeoJSON with automated detections. 
-9) Upload the outputted tiles folder to the labeler tool
+- This script outputs a tiles folder and a annotations.csv file, which are necessary to use the labeling tool. 
+9) Upload the outputted tiles folder and annotations.csv file to the labeler tool. Additional documentation is found [here](https://github.com/UMassCDS/satellite-imagery-labeling-tool/blob/containerization/docs/Labeler.md).
