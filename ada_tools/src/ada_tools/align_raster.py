@@ -16,22 +16,29 @@ def meters_to_decimal_degrees(meters, latitude):
 
 
 def align(build_target, build_reference):
-    build_target['build_id'] = build_target.index
-    xy_bounds = ((-10., 10.), (-10., 10.))
+    build_target["build_id"] = build_target.index
+    xy_bounds = ((-10.0, 10.0), (-10.0, 10.0))
     build_area = build_target.geometry.area.sum()
-    build_ref = build_reference[['geometry']].copy()
-    build = build_target[['build_id', 'geometry']].copy()
-    res = minimize(translate, (0., 0.), bounds=xy_bounds, args=(build, build_ref, build_area),
-                   options={"disp": True, "maxls": 100})
+    build_ref = build_reference[["geometry"]].copy()
+    build = build_target[["build_id", "geometry"]].copy()
+    res = minimize(
+        translate,
+        (0.0, 0.0),
+        bounds=xy_bounds,
+        args=(build, build_ref, build_area),
+        options={"disp": True, "maxls": 100},
+    )
     return res
 
 
 def translate(x_y, gdf, gdf_ref, total_area):
     # N.B. CRS must be in meters
     translated_geometry = gpd.GeoDataFrame()
-    translated_geometry['build_id'] = gdf.index
+    translated_geometry["build_id"] = gdf.index
     translated_geometry.geometry = gdf.geometry.translate(xoff=x_y[0], yoff=x_y[1])
-    intersection = gpd.overlay(translated_geometry, gdf_ref, how='intersection').dissolve(by='build_id', aggfunc='sum')
+    intersection = gpd.overlay(
+        translated_geometry, gdf_ref, how="intersection"
+    ).dissolve(by="build_id", aggfunc="sum")
     delta_overlap = total_area - intersection.geometry.area.sum()
     return np.log(delta_overlap)
 
@@ -49,11 +56,19 @@ def translate_raster(xb, yb, raster_start, raster_end):
 
 
 @click.command()
-@click.option('--targetbuild', default='buildings_target.geojson', help='target buildings')
-@click.option('--referencebuild', default='buildings_reference.geojson', help='reference buildings')
-@click.option('--alignedbuild', default='buildings_aligned.geojson', help='aligned buildings')
-@click.option('--targetraster', default='input.tif', help='target raster')
-@click.option('--alignedraster', default='output.tif', help='output raster')
+@click.option(
+    "--targetbuild", default="buildings_target.geojson", help="target buildings"
+)
+@click.option(
+    "--referencebuild",
+    default="buildings_reference.geojson",
+    help="reference buildings",
+)
+@click.option(
+    "--alignedbuild", default="buildings_aligned.geojson", help="aligned buildings"
+)
+@click.option("--targetraster", default="input.tif", help="target raster")
+@click.option("--alignedraster", default="output.tif", help="output raster")
 def main(targetbuild, referencebuild, alignedbuild, targetraster, alignedraster):
     """
     translate target raster based on best alignment between target and reference buildings
@@ -61,7 +76,7 @@ def main(targetbuild, referencebuild, alignedbuild, targetraster, alignedraster)
 
     for out in [alignedraster, alignedbuild]:
         path_to_out = os.path.split(out)[0]
-        if path_to_out != '' and not os.path.exists(path_to_out):
+        if path_to_out != "" and not os.path.exists(path_to_out):
             os.makedirs(path_to_out)
 
     build_target = gpd.read_file(targetbuild)
@@ -83,7 +98,7 @@ def main(targetbuild, referencebuild, alignedbuild, targetraster, alignedraster)
             build_aligned = build_target.copy()
             build_aligned.geometry = build_target.geometry.translate(xoff=xb, yoff=yb)
             build_aligned = build_aligned.to_crs(target_crs)
-            build_aligned.to_file(alignedbuild, driver='GeoJSON')
+            build_aligned.to_file(alignedbuild, driver="GeoJSON")
             translate_raster(xb, yb, targetraster, alignedraster)
         else:
             print("ERROR: alignment failed!")

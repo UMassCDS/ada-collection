@@ -4,7 +4,7 @@ click==8.1.4
 mercantile==1.1.5
 numpy>=1.23.5
 # osmium==3.0.1
-Pillow==8.3.2
+Pillow>=8.3.2
 psycopg2-binary==2.8.5
 # rasterio==1.1.5
 scikit-build>=0.11.1
