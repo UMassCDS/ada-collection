@@ -1,25 +1,20 @@
-import os
-import sys
 import argparse
 import datetime
-import time
+import logging
+import os
+import sys
 from shutil import move
-from PIL import Image
-import rasterio
-import pandas as pd
-import geopandas
-from geopandas.tools import reverse_geocode
-from shapely.geometry import box
-import numpy as np
 
+import geopandas
+import numpy as np
+import rasterio
+import rasterio.features
+import rasterio.mask
+import rasterio.warp
+from PIL import Image
+from shapely.geometry import box
 # from PIL import Image
 from tqdm import tqdm
-
-import rasterio.mask
-import rasterio.features
-import rasterio.warp
-
-import logging
 
 logger = logging.getLogger(__name__)
 logging.getLogger("fiona").setLevel(logging.ERROR)
@@ -162,12 +157,16 @@ def match_geometry(image_path, geo_image_file, geometry):
             return False
         if image.shape[0] > 3:
             image = image[:3, :, :]
-        if np.sum(image) > 0 and good_pixel_fraction >= NONZERO_PIXEL_THRESHOLD:
-            return save_image(image, transform, out_meta, image_path)
+        if (
+                np.sum(image) > 0
+                and good_pixel_fraction >= NONZERO_PIXEL_THRESHOLD
+        ):
+            save_image(image, transform, out_meta, image_path)
+            return True
         else:
             logging.info(
-                f"something's wrong with the image: {np.sum(image)}, {good_pixel_fraction}"
-            )
+                f"something's wrong with the image: {np.sum(image)}, {good_pixel_fraction}")
+            return False
     except ValueError:
         return False
 
@@ -185,58 +184,61 @@ def create_datapoints(
     logger.info("Creating datapoints.")
     logger.info("Feature Size {}".format(len(df)))
 
-    count = 0
-
     image_list = get_image_list(ROOT_DIRECTORY, ROOT_FILENAME_PRE, ROOT_FILENAME_POST)
 
     # logger.info(len(image_list)) # 319
-    df["is_building_processed"] = False
+
+    df['is_building_processed_pre'] = False
+    df['is_building_processed_post'] = False
 
     with open(LABELS_FILE, "w+") as labels_file:
-        for geo_image_path in tqdm(image_list):
-            with rasterio.open(geo_image_path) as geo_image_file:
-                print(
-                    f'buildings left to process: {len(df[df["is_building_processed"] == False])}'
-                )
-                try:
-                    df = df.to_crs(geo_image_file.crs)
-                except:
-                    df = df.to_crs("EPSG:4326")
-                df["is_building_in_image"] = df.within(box(*geo_image_file.bounds))
-                if not df["is_building_in_image"].any():
-                    logging.info(f"image contains no building, skipping")
-                    continue
-                df_in_image = df[
-                    (df["is_building_in_image"] == True)
-                    & (df["is_building_processed"] == False)
-                ]
-                for index, row in tqdm(
-                    df_in_image.iterrows(), total=df_in_image.shape[0]
-                ):
-                    # identify data point
-                    if "OBJECTID" in row.keys():
-                        object_id = row["OBJECTID"]
-                    else:
-                        object_id = index
-
-                    image_path = get_image_path(
-                        geo_image_path, object_id, TEMP_DATA_FOLDER
-                    )
-
-                    if os.path.exists(image_path):
+        for pre_or_post in ['pre', 'post']:
+            image_list_pp = [image for image in image_list if f'{pre_or_post}-event' in image]
+            print(f'starting {pre_or_post}-event')
+            count = 0
+            for geo_image_path in tqdm(image_list_pp):
+                with rasterio.open(geo_image_path) as geo_image_file:
+                    try:
+                        df = df.to_crs(geo_image_file.crs)
+                        crs = geo_image_file.crs
+                    except:
+                        df = df.to_crs("EPSG:4326")
+                        crs = "EPSG:4326"
+                    print(f'analyzing image {geo_image_path} (CRS {crs})')
+                    df['is_building_in_image'] = df.within(box(*geo_image_file.bounds))
+                    print(f'buildings found in image: {len(df[df["is_building_in_image"]])}')
+                    if not df['is_building_in_image'].any():
+                        logging.info(f"image contains no building, skipping")
                         continue
+                    df_in_image = df[(df['is_building_in_image'] == True) &
+                                     (df[f'is_building_processed_{pre_or_post}'] == False)]
+                    print(f'of which not yet processed: {len(df_in_image)}')
+                    for index, row in df_in_image.iterrows():  # tqdm(df_in_image.iterrows(), total=df_in_image.shape[0]):
 
-                    bounds = row["geometry"].bounds
-                    geometry = makesquare(*bounds)
+                        # identify data point
+                        if "OBJECTID" in row.keys():
+                            object_id = row["OBJECTID"]
+                        else:
+                            object_id = index
 
-                    save_success = match_geometry(image_path, geo_image_file, geometry)
-                    if save_success:
-                        count = count + 1
-                    df.at[index, "is_building_processed"] = True
+                        image_path = get_image_path(geo_image_path, object_id, TEMP_DATA_FOLDER)
+
+                        if os.path.exists(image_path):
+                            continue
+
+                        bounds = row["geometry"].bounds
+                        geometry = makesquare(*bounds)
+
+                        save_success = match_geometry(
+                            image_path, geo_image_file, geometry
+                        )
+                        if save_success:
+                            count = count + 1
+                        df.at[index, f'is_building_processed_{pre_or_post}'] = True
+            logger.info(f"Total buildings successfully saved for {pre_or_post}-event: {count}")
 
     delta = datetime.datetime.now() - start_time
-
-    logger.info("Created {} Datapoints in {}".format(count, delta))
+    logger.info("create_datapoints completed in {}".format(delta))
 
 
 def split_datapoints(filepath, TARGET_DATA_FOLDER, TEMP_DATA_FOLDER):
@@ -264,16 +266,13 @@ def split_datapoints(filepath, TARGET_DATA_FOLDER, TEMP_DATA_FOLDER):
     }
 
     for split in split_mappings:
+
         split_filepath = os.path.join(TARGET_DATA_FOLDER, split).replace("\\", "/")
         os.makedirs(split_filepath, exist_ok=True)
 
-        split_labels_file = os.path.join(split_filepath, "labels.txt").replace(
-            "\\", "/"
-        )
+        split_labels_file = os.path.join(split_filepath, "labels.txt").replace("\\", "/")
 
-        split_before_directory = os.path.join(split_filepath, "before").replace(
-            "\\", "/"
-        )
+        split_before_directory = os.path.join(split_filepath, "before").replace("\\", "/")
         os.makedirs(split_before_directory, exist_ok=True)
 
         split_after_directory = os.path.join(split_filepath, "after").replace("\\", "/")
@@ -283,19 +282,11 @@ def split_datapoints(filepath, TARGET_DATA_FOLDER, TEMP_DATA_FOLDER):
             for datapoint in tqdm(split_mappings[split]):
                 datapoint_name = datapoint.split(" ")[0]
 
-                before_src = os.path.join(
-                    TEMP_DATA_FOLDER, "before", datapoint_name
-                ).replace("\\", "/")
-                after_src = os.path.join(
-                    TEMP_DATA_FOLDER, "after", datapoint_name
-                ).replace("\\", "/")
+                before_src = os.path.join(TEMP_DATA_FOLDER, "before", datapoint_name).replace("\\", "/")
+                after_src = os.path.join(TEMP_DATA_FOLDER, "after", datapoint_name).replace("\\", "/")
 
-                before_dst = os.path.join(
-                    split_before_directory, datapoint_name
-                ).replace("\\", "/")
-                after_dst = os.path.join(split_after_directory, datapoint_name).replace(
-                    "\\", "/"
-                )
+                before_dst = os.path.join(split_before_directory, datapoint_name).replace("\\", "/")
+                after_dst = os.path.join(split_after_directory, datapoint_name).replace("\\", "/")
 
                 move(before_src, before_dst)
 
@@ -307,62 +298,60 @@ def split_datapoints(filepath, TARGET_DATA_FOLDER, TEMP_DATA_FOLDER):
 
 
 def create_inference_dataset(TEMP_DATA_FOLDER, TARGET_DATA_FOLDER):
-    logger.info("Creating inference dataset.")
+    logger.info('Creating inference dataset.')
     temp_before_directory = os.path.join(TEMP_DATA_FOLDER, "before").replace("\\", "/")
     temp_after_directory = os.path.join(TEMP_DATA_FOLDER, "after").replace("\\", "/")
     images_in_before_directory = [
         x for x in os.listdir(temp_before_directory) if x.endswith(".png")
     ]
     if len(images_in_before_directory) == 0:
-        raise RuntimeError("no pre-disaster images of buildings")
+        raise RuntimeError("no pre-event images of buildings")
     images_in_after_directory = [
         x for x in os.listdir(temp_after_directory) if x.endswith(".png")
     ]
     if len(images_in_after_directory) == 0:
-        raise RuntimeError("no post-disaster images of buildings")
+        raise RuntimeError("no post-event images of buildings")
     intersection = list(
         set(images_in_before_directory) & set(images_in_after_directory)
     )
     if len(intersection) == 0:
         raise RuntimeError("no corresponding images pre- and post-disaster")
-    logger.info("Images moved to inference: {}".format(len(intersection)))
 
-    inference_directory = os.path.join(TARGET_DATA_FOLDER, "inference").replace(
-        "\\", "/"
-    )
-    os.makedirs(inference_directory, exist_ok=True)
+    n_img_to_rm = len(list(set(images_in_before_directory) - set(images_in_after_directory))) + \
+                  len(list(set(images_in_after_directory) - set(images_in_before_directory)))
 
-    inference_before_directory = os.path.join(inference_directory, "before").replace(
-        "\\", "/"
-    )
-    os.makedirs(inference_before_directory, exist_ok=True)
+    logger.info(f'Images found in both pre- and post-event: {len(intersection)} (out of {len(intersection)+n_img_to_rm})')
 
-    inference_after_directory = os.path.join(inference_directory, "after").replace(
-        "\\", "/"
-    )
-    os.makedirs(inference_after_directory, exist_ok=True)
+    logger.info(f'Removing {n_img_to_rm} non-overlapping images')
+    for image in tqdm(list(set(images_in_before_directory) - set(images_in_after_directory))):
+        os.remove(os.path.join(temp_before_directory, image))
+    for image in tqdm(list(set(images_in_after_directory) - set(images_in_before_directory))):
+        os.remove(os.path.join(temp_after_directory, image))
 
-    for datapoint_name in tqdm(intersection):
-        before_image_src = os.path.join(temp_before_directory, datapoint_name).replace(
-            "\\", "/"
-        )
-        after_image_src = os.path.join(temp_after_directory, datapoint_name).replace(
-            "\\", "/"
-        )
+    os.rename(TEMP_DATA_FOLDER, os.path.join(TARGET_DATA_FOLDER, "inference").replace("\\", "/"))
 
-        before_image_dst = os.path.join(
-            inference_before_directory, datapoint_name
-        ).replace("\\", "/")
-        after_image_dst = os.path.join(
-            inference_after_directory, datapoint_name
-        ).replace("\\", "/")
-        move(before_image_src, before_image_dst)
-        move(after_image_src, after_image_dst)
+    # inference_directory = os.path.join(TARGET_DATA_FOLDER, "inference").replace("\\", "/")
+    # os.makedirs(inference_directory, exist_ok=True)
+    #
+    # inference_before_directory = os.path.join(inference_directory, "before").replace("\\", "/")
+    # os.makedirs(inference_before_directory, exist_ok=True)
+    #
+    # inference_after_directory = os.path.join(inference_directory, "after").replace("\\", "/")
+    # os.makedirs(inference_after_directory, exist_ok=True)
+    #
+    # for datapoint_name in tqdm(intersection):
+    #     before_image_src = os.path.join(temp_before_directory, datapoint_name).replace("\\", "/")
+    #     after_image_src = os.path.join(temp_after_directory, datapoint_name).replace("\\", "/")
+    #
+    #     before_image_dst = os.path.join(inference_before_directory, datapoint_name).replace("\\", "/")
+    #     after_image_dst = os.path.join(inference_after_directory, datapoint_name).replace("\\", "/")
+    #     move(before_image_src, before_image_dst)
+    #     move(after_image_src, after_image_dst)
 
 
 def create_version_file(version_number, TARGET_DATA_FOLDER, VERSION_FILE_NAME):
     with open(
-        os.path.join(TARGET_DATA_FOLDER, VERSION_FILE_NAME).replace("\\", "/"), "w+"
+            os.path.join(TARGET_DATA_FOLDER, VERSION_FILE_NAME).replace("\\", "/"), "w+"
     ) as version_file:
         version_file.write("{0}".format(version_number))
     return version_number
@@ -431,8 +420,8 @@ def main():
         action="store_true",
         default=True,
         help="For each building shape, creates a before and after "
-        "image stamp for the learning model, and places them "
-        "in the approriate directory (train, validation, or test)",
+             "image stamp for the learning model, and places them "
+             "in the approriate directory (train, validation, or test)",
     )
     args = parser.parse_args()
 
