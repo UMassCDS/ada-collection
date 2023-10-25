@@ -50,6 +50,8 @@ docker exec -it ada-collection bash
 ```
 
 ### Manual Setup
+Note that these steps are only tested on Linux, they are known not to work on MacOS. 
+
 1. Install Python 3.7 and [pip](https://pypi.org/project/pip/).
 2. Install [Anaconda](https://www.anaconda.com/products/individual).
 3. Create and activate a new Anaconda environment.
@@ -113,4 +115,10 @@ CUDA_VISIBLE_DEVICES="0" python caladrius/caladrius/run.py --run-name run --data
 ```
 final-layer --builds <workspace>/abd/buildings-clean.geojson --damage <workspace>/caladrius/runs/run-input_size_32-learning_rate_0.001-batch_size_32/predictions/run-split_inference-epoch_001-model_inception-predictions.txt --out <workspace>/buildings-predictions.geojson --thresh 1
 ```
-8) Take your favorite [GIS application](https://en.wikipedia.org/wiki/Geographic_information_system) and visualize `<workspace>/buildings-predictions.geojson` in a nice map
+8) Run the DISCount algorithm 
+```
+setup-discount --input <workspace>/buildings-predictions.geojson --pre-images <workspace>/images/pre-event --post-images <workspace>/images/post-event --outdir <workspace>/tiles --out-csv <workspace>/annotations.csv 
+```
+- This step aggregates all GeoJSONs in the tile level and runs a sampling algorithm to produce a GeoJSON with automated detections. 
+- This script outputs a tiles folder and a annotations.csv file, which are necessary to use the labeling tool. 
+9) Upload the outputted tiles folder and annotations.csv file to the labeler tool. Additional documentation is found [here](https://github.com/UMassCDS/satellite-imagery-labeling-tool/blob/containerization/docs/Labeler.md).

@@ -28,6 +28,7 @@ class Tile(NamedTuple):
     Represents a tile with its bounding box coordinates and the list of corresponding
     pre/post event images.
     """
+
     pre_event: List[str]
     post_event: List[str]
     left: float
@@ -46,9 +47,7 @@ def first_non_nan_pixel(img: object) -> object:
     return out
 
 
-def create_raster_mosaic_simple(
-        data: str
-) -> None:
+def create_raster_mosaic_simple(data: str) -> None:
     """
     Create a mosaic of multiple raster images.
     Args:
@@ -68,8 +67,12 @@ def create_raster_mosaic_simple(
         rasters = []
 
         try:
-            src_files.sort(key=lambda x: datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', x).group(), "%Y-%m-%d"),
-                           reverse=True)
+            src_files.sort(
+                key=lambda x: datetime.strptime(
+                    re.search(r"\d{4}-\d{2}-\d{2}", x).group(), "%Y-%m-%d"
+                ),
+                reverse=True,
+            )
         except:
             pass
 
@@ -93,15 +96,15 @@ def create_raster_mosaic_simple(
             # update the profile with the new shape and affine transform
             if profile is None:
                 profile = src.meta.copy()
-                profile.update(dtype=rasterio.uint8,
-                               compress='lzw')
+                profile.update(dtype=rasterio.uint8, compress="lzw")
             rasters.append(raster)
 
             if num_path > 0:
-
                 # raster_mosaic = agg(np.stack(rasters, axis=0))
                 raster_mosaic = rasters[0]
-                raster_mosaic[np.isnan(raster_mosaic)] = rasters[1][np.isnan(raster_mosaic)]
+                raster_mosaic[np.isnan(raster_mosaic)] = rasters[1][
+                    np.isnan(raster_mosaic)
+                ]
 
                 if num_path == len(src_files) - 1:
                     with rasterio.open(out_file, "w", **profile) as dst:
@@ -113,9 +116,7 @@ def create_raster_mosaic_simple(
 
 
 def create_raster_mosaic_tiled(
-    tile: Tile,
-    data: str,
-    agg: Callable[[np.ndarray], np.ndarray] = first_non_nan_pixel
+    tile: Tile, data: str, agg: Callable[[np.ndarray], np.ndarray] = first_non_nan_pixel
 ) -> None:
     """
     Create a mosaic of multiple raster images, cropped to a given tile.
@@ -154,10 +155,7 @@ def create_raster_mosaic_tiled(
         window = src.window(wind_extr[0], wind_extr[1], wind_extr[2], wind_extr[3])
         try:
             raster = src.read(
-                window=window,
-                boundless=True,
-                fill_value=np.nan,
-                out_dtype=np.int8
+                window=window, boundless=True, fill_value=np.nan, out_dtype=np.int8
             )
         except DatasetIOShapeError:
             pass
@@ -167,10 +165,12 @@ def create_raster_mosaic_tiled(
 
         # update the profile with the new shape and affine transform
         profile = src.meta.copy()
-        profile.update(height=window.height,
-                       width=window.width,
-                       transform=rasterio.windows.transform(window, src.transform),
-                       dtype=np.int8)
+        profile.update(
+            height=window.height,
+            width=window.width,
+            transform=rasterio.windows.transform(window, src.transform),
+            dtype=np.int8,
+        )
         raster = raster.astype(np.int8)
 
         try:
@@ -189,8 +189,12 @@ def create_raster_mosaic_tiled(
         rasters = []
 
         try:
-            src_files.sort(key=lambda x: datetime.strptime(re.search(r'\d{4}-\d{2}-\d{2}', x).group(), "%Y-%m-%d"),
-                           reverse=True)
+            src_files.sort(
+                key=lambda x: datetime.strptime(
+                    re.search(r"\d{4}-\d{2}-\d{2}", x).group(), "%Y-%m-%d"
+                ),
+                reverse=True,
+            )
         except:
             pass
 
@@ -216,16 +220,20 @@ def create_raster_mosaic_tiled(
             # update the profile with the new shape and affine transform
             if profile is None:
                 profile = src.meta.copy()
-                profile.update(height=window.height,
-                               width=window.width,
-                               transform=rasterio.windows.transform(window, src.transform),
-                               dtype=np.int8)
+                profile.update(
+                    height=window.height,
+                    width=window.width,
+                    transform=rasterio.windows.transform(window, src.transform),
+                    dtype=np.int8,
+                )
             rasters.append(raster)
 
             if num_path > 0 and len(rasters) > 0:
                 raster_mosaic = rasters[0]
                 try:
-                    raster_mosaic[np.isnan(raster_mosaic)] = rasters[1][np.isnan(raster_mosaic)]
+                    raster_mosaic[np.isnan(raster_mosaic)] = rasters[1][
+                        np.isnan(raster_mosaic)
+                    ]
 
                     if num_path == len(src_files) - 1:
                         raster_mosaic = raster_mosaic.astype(np.int8)
@@ -255,9 +263,9 @@ def create_raster_mosaic_tiled(
                 src_files_to_mosaic.append(src)
             mosaic, out_trans = merge(src_files_to_mosaic)
             out_meta = src.meta.copy()
-            out_meta.update(height=mosaic.shape[1],
-                            width=mosaic.shape[2],
-                            transform=out_trans)
+            out_meta.update(
+                height=mosaic.shape[1], width=mosaic.shape[2], transform=out_trans
+            )
             with rasterio.open(out_file, "w", **out_meta) as dst:
                 dst.write(mosaic)
         except:
@@ -272,10 +280,7 @@ def create_raster_mosaic_tiled(
         window = src.window(wind_extr[0], wind_extr[1], wind_extr[2], wind_extr[3])
         try:
             raster = src.read(
-                window=window,
-                boundless=True,
-                fill_value=np.nan,
-                out_dtype=np.int8
+                window=window, boundless=True, fill_value=np.nan, out_dtype=np.int8
             )
         except DatasetIOShapeError:
             pass
@@ -283,10 +288,12 @@ def create_raster_mosaic_tiled(
             pass
         out_shape = raster.shape
         profile = src.meta.copy()
-        profile.update(height=window.height,
-                       width=window.width,
-                       transform=rasterio.windows.transform(window, src.transform),
-                       dtype=np.int8)
+        profile.update(
+            height=window.height,
+            width=window.width,
+            transform=rasterio.windows.transform(window, src.transform),
+            dtype=np.int8,
+        )
         raster = raster.astype(np.int8)
 
         with rasterio.open(out_file, "w", **profile) as dst:
@@ -432,13 +439,13 @@ def create_raster_mosaic_tiled(
 def get_tile(df: gpd.GeoDataFrame, id: str) -> Tile:
     matches = df[df.tile == id]
     if len(matches) != 1:
-        raise KeyError(f'ERROR: {id} not found in index')
+        raise KeyError(f"ERROR: {id} not found in index")
 
     feature = matches.iloc[0, :]
     return Tile(
         list(feature["pre-event"].values()),
-        list(feature['post-event'].values()),
-        *feature.geometry.bounds # minx, miny, maxx, maxy
+        list(feature["post-event"].values()),
+        *feature.geometry.bounds,  # minx, miny, maxx, maxy
     )
 
 
@@ -455,11 +462,11 @@ def find_file(filename, search_path):
 
 
 @click.command()
-@click.option('--data', help='input directory')
-@click.option('--index', help='index')
-@click.option('--id', help='id')
-@click.option('--dest', help='output directory')
-@click.option('--maxar-tiling/--no-maxar-tiling', default=False)
+@click.option("--data", help="input directory")
+@click.option("--index", help="index")
+@click.option("--id", help="id")
+@click.option("--dest", help="output directory")
+@click.option("--maxar-tiling/--no-maxar-tiling", default=False)
 def main(data, index, id, dest, maxar_tiling):
     """
     Create `dest`/pre-event/merged.tif and `dest`/post-event/merged.tif for the given
@@ -471,44 +478,44 @@ def main(data, index, id, dest, maxar_tiling):
     index_df = gpd.read_file(index)
     if maxar_tiling:
         tile = index_df[index_df["tile"] == id].iloc[0]
-        for image in tile['pre-event'].values():
+        for image in tile["pre-event"].values():
             # image = image.replace(":", "%3A")
-            img_path = os.path.expanduser(os.path.join(dest, 'pre-event'))
+            img_path = os.path.expanduser(os.path.join(dest, "pre-event"))
             os.makedirs(img_path, exist_ok=True)
-            if 'pre-event' in image:
+            if "pre-event" in image:
                 img_path = os.path.expanduser(dest)
             copyfile(os.path.join(data, image), os.path.join(img_path, image))
-        for image in tile['post-event'].values():
+        for image in tile["post-event"].values():
             # image = image.replace(":", "%3A")
-            img_path = os.path.expanduser(os.path.join(dest, 'post-event'))
+            img_path = os.path.expanduser(os.path.join(dest, "post-event"))
             os.makedirs(img_path, exist_ok=True)
-            if 'post-event' in image:
+            if "post-event" in image:
                 img_path = os.path.expanduser(dest)
             copyfile(os.path.join(data, image), os.path.join(img_path, image))
 
-        create_raster_mosaic_simple(os.path.join(dest, 'pre-event'))
-        create_raster_mosaic_simple(os.path.join(dest, 'post-event'))
+        create_raster_mosaic_simple(os.path.join(dest, "pre-event"))
+        create_raster_mosaic_simple(os.path.join(dest, "post-event"))
 
     else:
         tile = get_tile(index_df, id)
 
         for image in tile.pre_event:
-            img_path = os.path.expanduser(os.path.join(dest, 'pre-event'))
+            img_path = os.path.expanduser(os.path.join(dest, "pre-event"))
             os.makedirs(img_path, exist_ok=True)
-            if 'pre-event' in image:
+            if "pre-event" in image:
                 img_path = os.path.expanduser(dest)
             copyfile(find_file(image, data), os.path.join(img_path, image))
         for image in tile.post_event:
-            img_path = os.path.expanduser(os.path.join(dest, 'post-event'))
+            img_path = os.path.expanduser(os.path.join(dest, "post-event"))
             os.makedirs(img_path, exist_ok=True)
-            if 'post-event' in image:
+            if "post-event" in image:
                 img_path = os.path.expanduser(dest)
             copyfile(find_file(image, data), os.path.join(img_path, image))
 
-        create_raster_mosaic_tiled(tile, os.path.join(dest, 'pre-event'))
-        create_raster_mosaic_tiled(tile, os.path.join(dest, 'post-event'))
+        create_raster_mosaic_tiled(tile, os.path.join(dest, "pre-event"))
+        create_raster_mosaic_tiled(tile, os.path.join(dest, "post-event"))
 
-    print('working directory has been set up', file=sys.stdout, flush=True)
+    print("working directory has been set up", file=sys.stdout, flush=True)
 
 
 if __name__ == "__main__":

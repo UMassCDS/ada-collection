@@ -5,6 +5,7 @@ from tqdm import tqdm
 import os
 import shutil
 import time
+
 start_time = time.time()
 
 SPLIT_SIZE = 1000
@@ -30,22 +31,20 @@ def divide_dataframe(df, shuffle=False):
     if shuffle:
         df = df.sample(frac=1).reset_index(drop=True)
     xmin, ymin, xmax, ymax = df.total_bounds
-    xhalf = (xmax+xmin)*0.5
-    yhalf = (ymax+ymin)*0.5
-    splitx = [df.cx[xmin:xhalf, ymin:ymax],
-              df.cx[xhalf:xmax, ymin:ymax]]
-    splity = [df.cx[xmin:xmax, ymin:yhalf],
-              df.cx[xmin:xmax, yhalf:ymax]]
-    if abs(len(splitx[0])-len(splitx[1])) < abs(len(splity[0])-len(splity[1])):
+    xhalf = (xmax + xmin) * 0.5
+    yhalf = (ymax + ymin) * 0.5
+    splitx = [df.cx[xmin:xhalf, ymin:ymax], df.cx[xhalf:xmax, ymin:ymax]]
+    splity = [df.cx[xmin:xmax, ymin:yhalf], df.cx[xmin:xmax, yhalf:ymax]]
+    if abs(len(splitx[0]) - len(splitx[1])) < abs(len(splity[0]) - len(splity[1])):
         return splitx
     else:
         return splity
 
 
 def get_num_disj(gdf):
-    df_sj = gpd.sjoin(gdf, gdf, how='left', predicate='intersects')
-    df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})
-    return len(df_sj[df_sj['index_left'] != df_sj['index_right']])
+    df_sj = gpd.sjoin(gdf, gdf, how="left", predicate="intersects")
+    df_sj = df_sj.reset_index().rename(columns={"index": "index_left"})
+    return len(df_sj[df_sj["index_left"] != df_sj["index_right"]])
 
 
 def divide_by_num_disj(gdf_list_to_divide):
@@ -65,7 +64,9 @@ def divide_by_num_disj(gdf_list_to_divide):
 def merge_each_gdf_in_list(gdf_list):
     gdf_list_merged = []
     for ix, gdf in enumerate(gdf_list):
-        print(f"merging buildings and appending {ix+1}/{len(gdf_list)} ({len(gdf_list_merged)})")
+        print(
+            f"merging buildings and appending {ix+1}/{len(gdf_list)} ({len(gdf_list_merged)})"
+        )
         gdf_list_merged.append(merge_touching_buildings(gdf))
     return gdf_list_merged
 
@@ -81,20 +82,30 @@ def combine_and_merge(gdf_list_merged):
             for gdf in tqdm(gdf_list_to_combine):
                 len_gdf_merged, len_gdf = len(gdf_merged), len(gdf)
                 gdf_combo = pd.concat([gdf_merged, gdf], ignore_index=True)
-                x_or_y, coord = which_border_is_shared(gdf_merged.total_bounds, gdf.total_bounds)
+                x_or_y, coord = which_border_is_shared(
+                    gdf_merged.total_bounds, gdf.total_bounds
+                )
                 print("merging on:", x_or_y)
                 if x_or_y == "x":
-                    is_near = (abs(gdf_combo.bounds.minx - coord) < THRESHOLD*2.) | (abs(gdf_combo.bounds.maxx - coord) < THRESHOLD*2.)
+                    is_near = (abs(gdf_combo.bounds.minx - coord) < THRESHOLD * 2.0) | (
+                        abs(gdf_combo.bounds.maxx - coord) < THRESHOLD * 2.0
+                    )
                     gdf_combo_to_merge = gdf_combo[is_near]
                     gdf_combo_not_to_merge = gdf_combo[~is_near]
                     gdf_combo_to_merge = merge_touching_buildings(gdf_combo_to_merge)
-                    gdf_merged = pd.concat([gdf_combo_to_merge, gdf_combo_not_to_merge], ignore_index=True)
+                    gdf_merged = pd.concat(
+                        [gdf_combo_to_merge, gdf_combo_not_to_merge], ignore_index=True
+                    )
                 elif x_or_y == "y":
-                    is_near = (abs(gdf_combo.bounds.miny - coord) < THRESHOLD*2.) | (abs(gdf_combo.bounds.maxy - coord) < THRESHOLD*2.)
+                    is_near = (abs(gdf_combo.bounds.miny - coord) < THRESHOLD * 2.0) | (
+                        abs(gdf_combo.bounds.maxy - coord) < THRESHOLD * 2.0
+                    )
                     gdf_combo_to_merge = gdf_combo[is_near]
                     gdf_combo_not_to_merge = gdf_combo[~is_near]
                     gdf_combo_to_merge = merge_touching_buildings(gdf_combo_to_merge)
-                    gdf_merged = pd.concat([gdf_combo_to_merge, gdf_combo_not_to_merge], ignore_index=True)
+                    gdf_merged = pd.concat(
+                        [gdf_combo_to_merge, gdf_combo_not_to_merge], ignore_index=True
+                    )
                 elif x_or_y == "none":
                     gdf_merged = gdf_combo
                 print(f"{len_gdf_merged} + {len_gdf} --> {len(gdf_merged)}")
@@ -109,31 +120,42 @@ def combine_and_merge(gdf_list_merged):
 
 
 def merge_touching_buildings(gdf):
-    df_sj = gpd.sjoin(gdf, gdf, how='left', predicate='intersects')
-    df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})
-    num_disj_start = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
+    df_sj = gpd.sjoin(gdf, gdf, how="left", predicate="intersects")
+    df_sj = df_sj.reset_index().rename(columns={"index": "index_left"})
+    num_disj_start = len(df_sj[df_sj["index_left"] != df_sj["index_right"]])
     num_disj = num_disj_start
     while num_disj > 0:
-        df_sj = df_sj.dissolve(by='index_right').rename_axis(index={'index_right': 'index'})
-        df_sj = df_sj.drop_duplicates(subset=['geometry'])
-        df_sj = df_sj[['geometry']]
-        df_sj = gpd.sjoin(df_sj, df_sj, how='left', predicate='intersects')
-        df_sj = df_sj.reset_index().rename(columns={'index': 'index_left'})
-        num_disj = len(df_sj[df_sj['index_left'] != df_sj['index_right']])
+        df_sj = (
+            df_sj.dissolve(by="index_right")
+            .rename_axis(index={"index_right": "index"})
+            .rename(columns={"TILE_ID_right": "TILE_ID"})
+        )
+        df_sj = df_sj.drop_duplicates(subset=["geometry"])
+        df_sj = df_sj[["geometry", "TILE_ID"]]
+        df_sj = gpd.sjoin(df_sj, df_sj, how="left", predicate="intersects")
+        df_sj = df_sj.reset_index().rename(columns={"index": "index_left"})
+        num_disj = len(df_sj[df_sj["index_left"] != df_sj["index_right"]])
         if num_disj > num_disj_start:
-            df_sj = df_sj.dissolve(by='index_left')
-    df_sj.drop(['index_left', 'index_right'], axis=1, inplace=True)
+            df_sj = df_sj.dissolve(by="index_left")
+    df_sj.drop(["index_left", "index_right", "TILE_ID_left"], axis=1, inplace=True)
+    df_sj = df_sj.rename(columns={"TILE_ID_right": "TILE_ID"})
     return df_sj
 
 
 @click.command()
-@click.option('--data', help='input (vector format)')
-@click.option('--dest', help='output (vector format)')
-@click.option('--crsmeters', default='EPSG:4087', help='CRS in unit meters, to filter small buildings [default: EPSG:4087]')
-@click.option('--waterbodies', default='', help='vector file of water bodies, to filter artifacts')
-@click.option('--area', default=10, help='minimum building area, in m2 [default: 10]')
+@click.option("--data", help="input (vector format)")
+@click.option("--dest", help="output (vector format)")
+@click.option(
+    "--crsmeters",
+    default="EPSG:4087",
+    help="CRS in unit meters, to filter small buildings [default: EPSG:4087]",
+)
+@click.option(
+    "--waterbodies", default="", help="vector file of water bodies, to filter artifacts"
+)
+@click.option("--area", default=10, help="minimum building area, in m2 [default: 10]")
 def main(data, dest, crsmeters, waterbodies, area):
-    """ merge touching buildings, filter small ones, simplify geometry """
+    """merge touching buildings, filter small ones, simplify geometry"""
 
     gdf = gpd.read_file(data)
     crs_original = gdf.crs
@@ -142,7 +164,7 @@ def main(data, dest, crsmeters, waterbodies, area):
         shutil.copyfile(data, dest)
         return
 
-    print(f'merge ({len(gdf)} entries)')
+    print(f"merge ({len(gdf)} entries)")
 
     # merge touching buildings
     gdf_list_split = divide_by_num_disj([gdf])
@@ -154,26 +176,28 @@ def main(data, dest, crsmeters, waterbodies, area):
     # filter small stuff
     print(f"second filter ({len(gdf)} entries)")
     gdf = gdf.to_crs(crsmeters)
-    gdf['area'] = gdf['geometry'].area
+    gdf["area"] = gdf["geometry"].area
     gdf = gdf[gdf.area > area]
-    gdf = gdf[['geometry']]
-    print(f'filter completed ({len(gdf)} entries)')
+    gdf = gdf[["geometry", "TILE_ID"]]
+    print(f"filter completed ({len(gdf)} entries)")
 
     # simplify geometry
-    gdf = gdf.simplify(tolerance=1., preserve_topology=True)
+    tile_ids = gdf["TILE_ID"]
+    gdf = gdf.simplify(tolerance=1.0, preserve_topology=True)
     gdf = gdf.to_crs(crs_original)
     gdf = gpd.GeoDataFrame(geometry=gdf)
+    gdf["TILE_ID"] = tile_ids
     gdf = gdf[~(gdf.geometry.is_empty | gdf.geometry.isna())]
 
     # filter by water bodies
     if len(gdf) > 0 and os.path.exists(waterbodies):
-        print('filtering by water bodies')
+        print("filtering by water bodies")
         gdf_water = gpd.read_file(waterbodies)
         if gdf.crs != gdf_water.crs:
             gdf = gdf.to_crs(gdf_water.crs)
-        gdf = gpd.sjoin(gdf, gdf_water, how='left', predicate='intersects')
-        gdf = gdf[gdf['TYPE'].isna()]
-        gdf = gdf[['geometry']]
+        gdf = gpd.sjoin(gdf, gdf_water, how="left", predicate="intersects")
+        gdf = gdf[gdf["TYPE"].isna()]
+        gdf = gdf[["geometry"]]
 
     if len(gdf) == 0:
         with open(dest, "w") as text_file:
@@ -183,7 +207,7 @@ def main(data, dest, crsmeters, waterbodies, area):
     # project to WGS84 and save
     if gdf.crs != "EPSG:4326":
         gdf = gdf.to_crs("EPSG:4326")
-    gdf.to_file(dest, driver='GeoJSON')
+    gdf.to_file(dest, driver="GeoJSON")
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

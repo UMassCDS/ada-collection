@@ -118,8 +118,8 @@ def get_image_list(root_folder, ROOT_FILENAME_PRE, ROOT_FILENAME_POST):
 def save_image(image, transform, out_meta, image_path):
     image = np.swapaxes(image, 0, 2)
     image = np.swapaxes(image, 0, 1)
-    if image.max() > 255.:
-        image = image * 255. / image.max()
+    if image.max() > 255.0:
+        image = image * 255.0 / image.max()
     try:
         im = Image.fromarray(image)
     except TypeError:
@@ -171,7 +171,14 @@ def match_geometry(image_path, geo_image_file, geometry):
         return False
 
 
-def create_datapoints(df, ROOT_DIRECTORY, ROOT_FILENAME_PRE, ROOT_FILENAME_POST, LABELS_FILE, TEMP_DATA_FOLDER):
+def create_datapoints(
+    df,
+    ROOT_DIRECTORY,
+    ROOT_FILENAME_PRE,
+    ROOT_FILENAME_POST,
+    LABELS_FILE,
+    TEMP_DATA_FOLDER,
+):
     start_time = datetime.datetime.now()
 
     logger.info("Creating datapoints.")
@@ -180,6 +187,7 @@ def create_datapoints(df, ROOT_DIRECTORY, ROOT_FILENAME_PRE, ROOT_FILENAME_POST,
     image_list = get_image_list(ROOT_DIRECTORY, ROOT_FILENAME_PRE, ROOT_FILENAME_POST)
 
     # logger.info(len(image_list)) # 319
+
     df['is_building_processed_pre'] = False
     df['is_building_processed_post'] = False
 
@@ -381,7 +389,7 @@ def main():
         "--reproject",
         type=str,
         default="",
-        help="force reprojection of buildings to given CRS"
+        help="force reprojection of buildings to given CRS",
     )
     parser.add_argument(
         "--datapre",
@@ -450,17 +458,20 @@ def main():
     number_of_empty_datapoints = number_of_all_datapoints - len(df)
     logger.info("Removed {} empty datapoints.".format(number_of_empty_datapoints))
 
-    logger.info(
-        "Creating dataset using {} datapoints.".format(
-            len(df)
-        )
-    )
+    logger.info("Creating dataset using {} datapoints.".format(len(df)))
 
     if args.reproject != "":
         df = df.to_crs(args.reproject)
 
     if args.create_image_stamps:
-        create_datapoints(df, ROOT_DIRECTORY, ROOT_FILENAME_PRE, ROOT_FILENAME_POST, LABELS_FILE, TEMP_DATA_FOLDER)
+        create_datapoints(
+            df,
+            ROOT_DIRECTORY,
+            ROOT_FILENAME_PRE,
+            ROOT_FILENAME_POST,
+            LABELS_FILE,
+            TEMP_DATA_FOLDER,
+        )
         split_datapoints(LABELS_FILE, TARGET_DATA_FOLDER, TEMP_DATA_FOLDER)
         create_inference_dataset(TEMP_DATA_FOLDER, TARGET_DATA_FOLDER)
     else:
@@ -468,7 +479,8 @@ def main():
 
     logger.info(
         "Created a Caladrius Dataset at {}v{}".format(
-            TARGET_DATA_FOLDER, create_version_file(args.version, TARGET_DATA_FOLDER, VERSION_FILE_NAME)
+            TARGET_DATA_FOLDER,
+            create_version_file(args.version, TARGET_DATA_FOLDER, VERSION_FILE_NAME),
         )
     )
 
